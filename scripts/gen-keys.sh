@@ -1,31 +1,45 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# gen-keys.sh - Generate RSA key pair for signing cgo-void-repo packages
+# gen-keys.sh - Generate RSA key pair for cgo-void-repo
+#
+# IMPORTANT: Private keys are NEVER stored in the Git repository tree!
+# They are stored in ~/.local/share/cgo-void-repo/cgo-void-repo.rsa (mode 0600)
+# Only PUBLIC keys are placed in repo-keys/ and docs/ (safe to commit & publish).
 # ==============================================================================
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
-KEYS_DIR="${REPO_DIR}/keys"
-PRIVKEY="${KEYS_DIR}/cgo-void-repo.rsa"
-PUBKEY="${KEYS_DIR}/cgo-void-repo.rsa.pub"
+REPO_KEYS_DIR="${REPO_DIR}/repo-keys"
+DOCS_DIR="${REPO_DIR}/docs"
 
-mkdir -p "${KEYS_DIR}"
+# External private storage (outside git repository)
+SECURE_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/cgo-void-repo"
+PRIVKEY="${SECURE_DIR}/cgo-void-repo.rsa"
+
+PUBKEY_PEM="${REPO_KEYS_DIR}/cgo-void-repo.pem"
+PUBKEY_PUB="${REPO_KEYS_DIR}/cgo-void-repo.rsa.pub"
+DOCS_PUBKEY="${DOCS_DIR}/cgo-void-repo.pem"
+
+mkdir -p "${SECURE_DIR}" "${REPO_KEYS_DIR}" "${DOCS_DIR}"
+chmod 700 "${SECURE_DIR}"
 
 if [ -f "${PRIVKEY}" ]; then
-    echo "Notice: Key pair already exists at ${PRIVKEY}"
-    echo "Public key: ${PUBKEY}"
-    exit 0
+    echo "Notice: Private key already exists at: ${PRIVKEY}"
+else
+    echo "=== Generating 2048-bit RSA Private Key in secure local storage ==="
+    echo "Private key location: ${PRIVKEY} (OUTSIDE git repository)"
+    openssl genrsa -out "${PRIVKEY}" 2048
+    chmod 600 "${PRIVKEY}"
 fi
 
-echo "=== Generating 2048-bit RSA key pair for cgo-void-repo ==="
-openssl genrsa -out "${PRIVKEY}" 2048
-chmod 600 "${PRIVKEY}"
+echo "--> Generating public key in PEM and PUB formats for repository and website..."
+openssl rsa -in "${PRIVKEY}" -pubout -out "${PUBKEY_PEM}"
+chmod 644 "${PUBKEY_PEM}"
 
-openssl rsa -in "${PRIVKEY}" -pubout -out "${PUBKEY}"
-chmod 644 "${PUBKEY}"
+cp "${PUBKEY_PEM}" "${PUBKEY_PUB}"
+cp "${PUBKEY_PEM}" "${DOCS_PUBKEY}"
 
-echo "--> Generated:"
-echo "    Private Key: ${PRIVKEY} (mode 0600 - DO NOT COMMIT)"
-echo "    Public Key:  ${PUBKEY} (safe to share/commit)"
-echo "Done!"
+echo "--> Cryptography setup complete!"
+echo "    [PRIVATE KEY] ${PRIVKEY} (Kept safely outside repository, mode 0600)"
+echo "    [PUBLIC KEY]  ${PUBKEY_PEM} (Stored in repo-keys/ and docs/ for GitHub Pages)"

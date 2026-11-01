@@ -1,213 +1,162 @@
 # AGENT.md - Autonomous Operational Playbook for `cgo-void-repo`
 
-> **Scope**: This document guides AI agents (and human maintainers) through creating, managing, building, signing, and publishing the custom Void Linux package repository **`cgo-void-repo`** for **CasperGamingOne**.
+> **Scope**: This document guides AI agents (and human maintainers) through creating, managing, building, signing, and deploying the custom Void Linux package repository **`cgo-void-repo`** for **CasperGamingOne**, hosted publicly on **GitHub** with a **GitHub Pages** website.
 
 ---
 
-## 1. Environment & Workspace Topology
+## 1. Environment, Workspace & Architecture
 
 All Git projects are dedicated to a clean, isolated root directory under the user's home folder.
 
-| Path | Purpose |
-| :--- | :--- |
-| `~/git` (`/home/caspergamingone/git`) | **Dedicated Git Workspace** for all git projects. |
-| `~/git/cgo-void-repo` | **Custom Repository Root** (templates, scripts, keys, release metadata). |
-| `~/git/void-packages` | Upstream Void Linux packaging engine (`xbps-src`). |
-| `~/git/cgo-void-repo/srcpkgs` | Source package definitions / templates authored by CasperGamingOne. |
-| `~/git/cgo-void-repo/binpkgs` | Built binary `.xbps` packages and repository index files. |
-| `~/git/cgo-void-repo/keys` | Cryptographic public keys and key generation tools (private keys git-ignored). |
-| `~/git/cgo-void-repo/scripts` | Automation scripts for building, indexing, signing, and installing. |
-| `/etc/xbps.d/50-cgo-void-repo.conf` | Host system XBPS repository configuration. |
-| `/var/db/xbps/keys/` | Host system directory for trusted repository signing keys. |
+| Path | Purpose | Public / Git Tracked |
+| :--- | :--- | :--- |
+| `~/git` (`/home/caspergamingone/git`) | **Dedicated Git Workspace** for all git projects | N/A (Workspace root) |
+| `~/git/cgo-void-repo` | **Custom Repository Root** (public GitHub repo) | Yes (Git tracked) |
+| `~/git/cgo-void-repo/docs` | **GitHub Pages Website & Web Distribution** | Yes (`index.html`, `.nojekyll`, styles, public key) |
+| `~/git/cgo-void-repo/repo-keys` | **Public RSA Keys** (`.pem` / `.pub` / `.plist`) | Yes (Public keys only) |
+| `~/git/cgo-void-repo/srcpkgs` | **Source Package Templates** (xbps-src definitions) | Yes (Git tracked) |
+| `~/git/cgo-void-repo/scripts` | **Automation Scripts** (build, sign, setup, deploy) | Yes (Git tracked) |
+| `~/git/cgo-void-repo/binpkgs` | **Local Binary Packages** (local `.xbps` cache) | No (Git ignored) |
+| `~/.local/share/cgo-void-repo` | **Secure Local Private Key Storage** | **NEVER in Git** (`0700` dir, `0600` key) |
+| `~/git/void-packages` | Upstream Void Linux packaging engine (`xbps-src`) | Separate Git repo |
 
 ---
 
-## 2. Agent Identity & Role
+## 2. Cryptography & Secrets Directives (STRICT POLICY)
 
-When operating in this repository, you are:
-1. An expert **Void Linux Systems Engineer** and **XBPS Package Maintainer**.
-2. Careful and disciplined: always validate templates with `xlint`, protect private keys, and test packages prior to release.
-3. Aware of the user's environment: Void Linux x86_64 with `xtools`, `xbps-install`, and `xbps-rindex` available.
+Because this repository is public on GitHub and hosted via GitHub Pages:
 
----
-
-## 3. End-to-End Operational Lifecycle
-
-### Phase 1: Toolchain & Build Engine Setup
-Void packages are compiled using the `xbps-src` containerized builder from `void-packages`.
-
-1. **Verify Prerequisites**:
-   Ensure `git`, `xtools`, `openssl`, and `xbps-rindex` are present on the host:
-   ```bash
-   sudo xbps-install -S git xtools openssl
-   ```
-2. **Bootstrap the Void Build Engine**:
-   Execute the setup script from `~/git/cgo-void-repo`:
-   ```bash
-   ./scripts/setup-env.sh
-   ```
-   This script:
-   - Clones `void-linux/void-packages` into `~/git/void-packages` (if not present).
-   - Writes `XBPS_ALLOW_RESTRICTED=yes` and parallel makejobs into `void-packages/etc/conf`.
-   - Runs `./xbps-src binary-bootstrap` to populate the `masterdir` chroot.
+> [!CAUTION]
+> **NO SECRETS OR PRIVATE KEYS IN THE REPOSITORY TREE**
+> 1. **Do NOT create a "SECRETS" directory inside the git tree.**
+> 2. **Local Private Key**: Kept exclusively in `~/.local/share/cgo-void-repo/cgo-void-repo.rsa` with mode `0600`.
+> 3. **CI/CD Private Key**: Provided exclusively as an encrypted GitHub Actions secret (`RSA_PRIVATE_KEY`). The workflow writes it to a temporary runner file, signs repodata, and immediately unlinks it.
+> 4. **Public Keys**: `repo-keys/cgo-void-repo.pem` and `docs/cgo-void-repo.pem` contain only public keys. These are 100% safe to commit and distribute.
 
 ---
 
-### Phase 2: Authoring Package Templates
-Templates are stored in `~/git/cgo-void-repo/srcpkgs/<pkgname>/template`.
+## 3. System Ecosystem Awareness: XLibre Integration
 
-#### Required Template Anatomy:
+The maintainer's host system runs **XLibre** alongside Void Linux:
+
+* **XLibre Repository**: `https://github.com/xlibre-void/xlibre/releases/latest/download`
+* **XLibre Key**: `/var/db/xbps/keys/00:ca:42:57:c9:c0:9a:ec:94:b4:7d:97:e5:a9:aa:1e.plist`
+* **Installed Packages**: `xlibre`, `xlibre-xserver`, XLibre input & video drivers (`xf86-video-*`, `xf86-input-*`).
+* **Coexisting Repos**: `cherrybtw/gsr4xbps`, `sonicde-void`, and Void Linux official repositories.
+
+### Agent Packaging Rules for XLibre Compatibility:
+1. When packaging X11 applications, depend on generic development libraries (e.g. `makedepends="libX11-devel libXext-devel libXrandr-devel"`), not specific xorg server implementations.
+2. If creating display-related tools or window manager components, ensure compatibility with XLibre server interfaces.
+3. Follow the clean public repository pattern modeled by `xlibre-void` (public key in `repo-keys/`, release binaries published online).
+
+---
+
+## 4. GitHub Pages Dual Role (Website + Static XBPS Repository)
+
+The `docs/` directory acts as both:
+1. **Interactive Web Front**: A modern landing page (`docs/index.html`, `style.css`, `app.js`) explaining setup steps with 1-click command copying, package search, and compatibility badges.
+2. **Static XBPS Repository**: The `.nojekyll` file ensures GitHub Pages serves raw files (`<arch>-repodata`, `*.xbps`, `cgo-void-repo.pem`) directly over HTTPS.
+
+Clients can configure:
+```text
+repository=https://caspergamingone.github.io/cgo-void-repo/x86_64
+```
+And import the key directly from the site:
 ```bash
-# Template file for '<pkgname>'
+sudo wget -O /var/db/xbps/keys/cgo-void-repo.pem https://caspergamingone.github.io/cgo-void-repo/cgo-void-repo.pem
+```
+
+---
+
+## 5. End-to-End Operational Lifecycle
+
+### Phase 1: Environment Setup
+Verify host dependencies and initialize the `void-packages` builder:
+```bash
+# Verify host tools
+sudo xbps-install -S git xtools openssl xbps-rindex
+
+# Bootstrap build engine in ~/git/void-packages
+./scripts/setup-env.sh
+```
+
+### Phase 2: Generating Cryptographic Keys
+Run key generator:
+```bash
+./scripts/gen-keys.sh
+```
+- Creates `~/.local/share/cgo-void-repo/cgo-void-repo.rsa` (secure local private key).
+- Exports `repo-keys/cgo-void-repo.pem` and `docs/cgo-void-repo.pem` (public keys for repo and website).
+
+### Phase 3: Authoring & Linting Templates
+Place package definitions in `srcpkgs/<pkgname>/template`:
+```bash
+# Required template variables
 pkgname=<pkgname>
 version=<version>
 revision=1
-build_style=<gnu-configure|cmake|meson|python3-pep517|cargo|meta|etc.>
-short_desc="<Concise description under 72 chars>"
+build_style=<meson|cmake|gnu-configure|python3-pep517|cargo|meta>
+short_desc="<Summary under 72 chars>"
 maintainer="CasperGamingOne <caspergamingone@users.noreply.github.com>"
-license="<SPDX license identifier, e.g. MIT, GPL-3.0-or-later>"
+license="<SPDX License>"
 homepage="<https://...>"
-distfiles="<https://.../v${version}.tar.gz>"
-checksum=<sha256 hash from xgensum or sha256sum>
-
-# Build & install hooks (if build_style does not handle it automatically):
-# do_build() { ... }
-# do_install() { ... }
+distfiles="<https://...>"
+checksum=<sha256>
+```
+Always lint before building:
+```bash
+xlint srcpkgs/<pkgname>/template
 ```
 
-#### Packaging Rules for the Agent:
-1. **Linting**: Always lint new or edited templates using `xlint`:
-   ```bash
-   xlint srcpkgs/<pkgname>/template
-   ```
-2. **Checksum Generation**: For remote distfiles, fetch the sha256 checksum:
-   ```bash
-   xgensum -f srcpkgs/<pkgname>/template
-   # or manually:
-   curl -sL "<distfile_url>" | sha256sum
-   ```
-3. **Dependencies**:
-   - `hostmakedepends`: Tools required on host during build time (e.g. `pkg-config`, `cmake`, `ninja`, `cargo`).
-   - `makedepends`: Libraries/headers required to compile (e.g. `openssl-devel`, `libX11-devel`).
-   - `depends`: Runtime dependencies that XBPS cannot automatically detect via `shlib-provides`.
-
----
-
-### Phase 3: Building Packages
-To build a package, run:
+### Phase 4: Compiling Packages
+Build package using the helper script:
 ```bash
 ./scripts/build-pkg.sh <pkgname>
 ```
+Output packages land in `binpkgs/<arch>/`.
 
-#### What this does:
-1. Symlinks `~/git/cgo-void-repo/srcpkgs/<pkgname>` into `~/git/void-packages/srcpkgs/<pkgname>`.
-2. Executes `./xbps-src pkg <pkgname>` inside `void-packages`.
-3. Copies the resulting `.xbps` package from `void-packages/hostdir/binpkgs/` into `~/git/cgo-void-repo/binpkgs/<arch>/`.
+### Phase 5: Indexing & Signing Locally
+```bash
+./scripts/sign-repo.sh
+```
+- Uses private key from `~/.local/share/cgo-void-repo/cgo-void-repo.rsa`.
+- Adds packages via `xbps-rindex -a`.
+- Signs `<arch>-repodata` with `xbps-rindex --sign`.
+- Cleans stale package versions via `xbps-rindex -c`.
 
-#### Rebuilding or Cleaning:
-- Force clean build:
-  ```bash
-  cd ~/git/void-packages && ./xbps-src -f pkg <pkgname>
-  ```
-- Purge build directory:
-  ```bash
-  cd ~/git/void-packages && ./xbps-src clean <pkgname>
-  ```
-
----
-
-### Phase 4: Key Management & Repository Signing
-
-Void Linux validates repository integrity using RSA key pairs.
-
-1. **Key Generation**:
-   ```bash
-   ./scripts/gen-keys.sh
-   ```
-   - Private key: `keys/cgo-void-repo.rsa` (chmod 600, ignored by git).
-   - Public key: `keys/cgo-void-repo.rsa.pub` (safe for distribution).
-
-2. **Index and Sign Packages**:
-   ```bash
-   ./scripts/sign-repo.sh
-   ```
-   This command executes:
-   ```bash
-   # Add all binary packages to index
-   xbps-rindex -a binpkgs/<arch>/*.xbps
-   # Sign index repodata
-   xbps-rindex --sign --signedby "CasperGamingOne Void Repository" --privkey keys/cgo-void-repo.rsa binpkgs/<arch>
-   # Clean obsolete package versions from index
-   xbps-rindex -c binpkgs/<arch>
-   ```
-
-> [!CAUTION]
-> **NEVER** commit `keys/cgo-void-repo.rsa` to git. Ensure it matches `.gitignore`.
-
----
-
-### Phase 5: Distribution & Hosting Strategies
-
-#### Strategy A: GitHub Releases (Recommended & Compatible with existing user repos)
-Compatible with the repository structure used by existing third-party Void repos like `gsr4xbps` and `sonicde-void`.
-1. Push package templates and git tag `v<version>` to GitHub.
-2. The included GitHub Actions workflow (`.github/workflows/build-and-release.yml`) builds, signs (using secret `RSA_PRIVATE_KEY`), and uploads packages + `<arch>-repodata` to the GitHub Release.
-3. Users configure:
-   ```text
-   repository=https://github.com/caspergamingone/cgo-void-repo/releases/latest/download
-   ```
-
-#### Strategy B: Local Development Repository
-Test immediately on this machine without internet hosting:
+### Phase 6: Local System Testing
+To install and test on the local machine immediately:
 ```bash
 ./scripts/install-local.sh
+sudo xbps-install <pkgname>
 ```
-This sets up `/etc/xbps.d/50-cgo-void-repo.conf` with:
-```text
-repository=/home/caspergamingone/git/cgo-void-repo/binpkgs/<arch>
-```
+
+### Phase 7: GitHub Pages & Releases Deployment
+1. Commit template changes, website updates, and public keys:
+   ```bash
+   git add srcpkgs/ docs/ repo-keys/
+   git commit -m "feat(pkg): add <pkgname>"
+   git push origin main
+   ```
+2. For releases, push a version tag:
+   ```bash
+   git tag v1.0.0
+   git push origin v1.0.0
+   ```
+3. The GitHub Actions workflow (`.github/workflows/build-and-release.yml`):
+   - Compiles packages inside `ghcr.io/void-linux/xbps-src-masterdir:latest`.
+   - Signs repodata using repository secret `RSA_PRIVATE_KEY`.
+   - Automatically publishes the website and packages to GitHub Pages.
+   - Attaches binary packages to GitHub Releases.
 
 ---
 
-### Phase 6: Client Configuration
+## 6. Troubleshooting Playbook for the Agent
 
-To enable `cgo-void-repo` on any Void Linux machine:
-
-1. **Install Public Key**:
-   ```bash
-   sudo cp keys/cgo-void-repo.rsa.pub /var/db/xbps/keys/cgo-void-repo.pem
-   ```
-2. **Add Repo Config** (`/etc/xbps.d/50-cgo-void-repo.conf`):
-   ```text
-   repository=https://github.com/caspergamingone/cgo-void-repo/releases/latest/download
-   ```
-3. **Synchronize & Install**:
-   ```bash
-   sudo xbps-install -S
-   sudo xbps-install <pkgname>
-   ```
-
----
-
-## 4. Troubleshooting Playbook for the Agent
-
-| Issue | Cause | Agent Remediation |
+| Issue | Cause | Agent Action |
 | :--- | :--- | :--- |
-| `SHA256 mismatch` | Distfile upstream changed or invalid hash | Run `xgensum -f srcpkgs/<pkg>/template` to refresh checksum. |
-| `XBPS_ALLOW_RESTRICTED` | Package has restricted license | Ensure `XBPS_ALLOW_RESTRICTED=yes` exists in `void-packages/etc/conf`. |
-| `SONAME / shlib provider missing` | Missing runtime dependency library | Search provider: `xlocate <libname.so>` and add pkg to `makedepends`. |
-| `Unregistered package in repository` | `xbps-rindex` has not registered binary | Run `./scripts/sign-repo.sh` to update `<arch>-repodata`. |
-| `RSA signature verification failed` | Public key missing in `/var/db/xbps/keys/` | Copy `keys/cgo-void-repo.rsa.pub` to `/var/db/xbps/keys/cgo-void-repo.pem`. |
-
----
-
-## 5. Agent Operational Directives
-
-1. **Always use the dedicated git directory**:
-   Keep repository code strictly inside `/home/caspergamingone/git/cgo-void-repo`.
-2. **Run linting before proposing builds**:
-   Execute `xlint` on any modified template before invoking `./scripts/build-pkg.sh`.
-3. **Preserve modularity**:
-   Keep build automation in `scripts/`, templates in `srcpkgs/`, configs in `etc/`, keys in `keys/`.
-4. **Interactive Confirmation for Sudo**:
-   Inform the user before executing commands that modify `/etc/xbps.d` or `/var/db/xbps/keys`.
+| `Signing key not found` | Private key not yet generated | Run `./scripts/gen-keys.sh` to initialize `~/.local/share/cgo-void-repo/`. |
+| `Private key in git status` | Accidentally copied key into repo | Stop immediately, delete key from repo, ensure it is only in `~/.local/share/`. |
+| `XLibre dependency conflict` | Package declares conflicting xorg-server | Change dependency to modular X11 libs (e.g. `libX11-devel`). |
+| `GitHub Pages 404 on .xbps` | Jekyll filtering unlisted extensions | Verify `docs/.nojekyll` exists and is tracked in git. |
+| `Checksum mismatch` | Source tarball changed upstream | Run `xgensum -f srcpkgs/<pkg>/template`. |

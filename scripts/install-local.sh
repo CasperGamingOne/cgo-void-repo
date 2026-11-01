@@ -7,15 +7,15 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 BINPKGS_DIR="${REPO_DIR}/binpkgs"
-PUBKEY="${REPO_DIR}/keys/cgo-void-repo.rsa.pub"
+PUBKEY="${REPO_DIR}/repo-keys/cgo-void-repo.pem"
 XBPS_D_CONF="/etc/xbps.d/50-cgo-void-repo.conf"
 XBPS_KEYS_DIR="/var/db/xbps/keys"
 
 echo "=== Installing cgo-void-repo for local system use ==="
 
 if [ ! -f "${PUBKEY}" ]; then
-    echo "ERROR: Public key not found at ${PUBKEY}. Run ./scripts/gen-keys.sh first."
-    exit 1
+    echo "Public key not found at ${PUBKEY}. Generating keypair first..."
+    "${SCRIPT_DIR}/gen-keys.sh"
 fi
 
 # Detect architecture
@@ -31,7 +31,7 @@ sudo tee "${XBPS_D_CONF}" > /dev/null << EOF
 repository=${LOCAL_REPO_PATH}
 EOF
 
-echo "--> Installing public key to ${XBPS_KEYS_DIR} (requires sudo)..."
+echo "--> Installing public key to ${XBPS_KEYS_DIR}/cgo-void-repo.pem (requires sudo)..."
 sudo install -m 644 "${PUBKEY}" "${XBPS_KEYS_DIR}/cgo-void-repo.pem"
 
 echo "--> Synchronizing repository index..."

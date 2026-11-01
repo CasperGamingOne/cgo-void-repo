@@ -1,22 +1,34 @@
-name: Build and Release XBPS Packages
+name: Build, Sign and Deploy cgo-void-repo
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
     paths:
       - 'srcpkgs/**'
+      - 'docs/**'
   workflow_dispatch:
 
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/void-linux/xbps-src-masterdir:latest
       options: --privileged
 
     steps:
-      - name: Checkout repository
+      - name: Checkout cgo-void-repo
         uses: actions/checkout@v4
         with:
           path: cgo-void-repo
@@ -35,24 +47,17 @@ jobs:
           echo "XBPS_ALLOW_RESTRICTED=yes" >> etc/conf
           ./xbps-src binary-bootstrap
 
-      - name: Link templates
+      - name: Link and build custom templates
         run: |
           for pkg in cgo-void-repo/srcpkgs/*; do
-            if [ -d "$pkg" ]; then
+            if [ -d "$pkg" ] && [ -f "$pkg/template" ]; then
               pkgname=$(basename "$pkg")
-              echo "Linking $pkgname..."
+              echo "==> Linking $pkgname..."
               ln -s "../../$pkg" "void-packages/srcpkgs/$pkgname"
-            fi
-          done
-
-      - name: Build packages
-        run: |
-          cd void-packages
-          for pkg in ../cgo-void-repo/srcpkgs/*; do
-            if [ -d "$pkg" ]; then
-              pkgname=$(basename "$pkg")
-              echo "Building $pkgname..."
+              echo "==> Building $pkgname with xbps-src..."
+              cd void-packages
               ./xbps-src pkg "$pkgname"
+              cd ..
             fi
           done
 
@@ -60,25 +65,39 @@ jobs:
         env:
           RSA_KEY: ${{ secrets.RSA_PRIVATE_KEY }}
         run: |
-          mkdir -p cgo-void-repo/dist
           ARCH=$(xbps-uhelper arch)
-          cp -r void-packages/hostdir/binpkgs/* cgo-void-repo/dist/ || true
+          DIST_DIR="cgo-void-repo/docs/$ARCH"
+          mkdir -p "$DIST_DIR"
           
-          cd cgo-void-repo/dist
+          # Copy built packages to docs arch directory for GitHub Pages
+          find void-packages/hostdir/binpkgs -name "*.xbps" -exec cp -uv {} "$DIST_DIR/" \; || true
+
+          cd "$DIST_DIR"
           if [ -n "$RSA_KEY" ]; then
+            echo "==> Signing repodata using GitHub Secret RSA_PRIVATE_KEY..."
             echo "$RSA_KEY" > signing.key
             chmod 600 signing.key
             xbps-rindex -a ./*.xbps || true
             xbps-rindex --sign --signedby "CasperGamingOne Void Repository" --privkey signing.key .
+            xbps-rindex -c . || true
             rm -f signing.key
           else
+            echo "==> Notice: RSA_PRIVATE_KEY secret not found, indexing without signature..."
             xbps-rindex -a ./*.xbps || true
           fi
 
-      - name: Create Release
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: cgo-void-repo/docs
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
+
+      - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-          files: cgo-void-repo/dist/*
+          files: cgo-void-repo/docs/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

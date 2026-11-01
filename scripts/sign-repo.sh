@@ -7,22 +7,26 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 BINPKGS_DIR="${REPO_DIR}/binpkgs"
-PRIVKEY="${REPO_DIR}/keys/cgo-void-repo.rsa"
+
+# Secure private key location (outside git repo)
+SECURE_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/cgo-void-repo"
+PRIVKEY="${CGO_PRIVKEY:-${SECURE_DIR}/cgo-void-repo.rsa}"
 SIGNED_BY="${SIGNED_BY:-CasperGamingOne Void Repository <caspergamingone>}"
 
 if [ ! -d "${BINPKGS_DIR}" ]; then
-    echo "ERROR: ${BINPKGS_DIR} does not exist. Build packages first."
+    echo "ERROR: ${BINPKGS_DIR} does not exist. Build packages first with ./scripts/build-pkg.sh"
     exit 1
 fi
 
 if [ ! -f "${PRIVKEY}" ]; then
-    echo "Notice: Signing key not found at ${PRIVKEY}. Generating one now..."
+    echo "Notice: Private signing key not found at ${PRIVKEY}."
+    echo "Generating new keypair now via scripts/gen-keys.sh..."
     "${SCRIPT_DIR}/gen-keys.sh"
 fi
 
 echo "=== Indexing and Signing cgo-void-repo ==="
+echo "Using Private Key: ${PRIVKEY}"
 
-# Find all architecture directories in binpkgs (or binpkgs itself if flat)
 ARCH_DIRS=$(find "${BINPKGS_DIR}" -mindepth 1 -maxdepth 1 -type d)
 if [ -z "${ARCH_DIRS}" ]; then
     ARCH_DIRS="${BINPKGS_DIR}"
@@ -35,7 +39,6 @@ for dir in ${ARCH_DIRS}; do
     PKGS=$(find "${dir}" -maxdepth 1 -name "*.xbps" ! -name "*-repodata*")
     if [ -n "${PKGS}" ]; then
         echo "--> Registering packages with xbps-rindex -a..."
-        # xbps-rindex expects packages as arguments
         cd "${dir}"
         xbps-rindex -a ./*.xbps
     else

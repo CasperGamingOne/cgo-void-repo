@@ -9,13 +9,19 @@ masterdir/
 
 # Cryptographic private keys - NEVER COMMIT PRIVATE KEYS
 *.rsa
-*.key
 *.priv
-*.pem
-!keys/*.pub
-!keys/*.pem.example
+*.key
+id_rsa*
 
-# Void packages clone (if cloned inside repo)
+# Whitelist public keys for repo-keys/ and docs/ (for website & GitHub Pages)
+!repo-keys/*.pub
+!repo-keys/*.pem
+!repo-keys/*.plist
+!docs/*.pem
+!docs/*.pub
+!docs/*.plist
+
+# Void packages engine clone (lives side-by-side in ~/git/void-packages)
 void-packages/
 
 # Temporary and editor files
