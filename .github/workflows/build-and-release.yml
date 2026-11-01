@@ -43,54 +43,72 @@ jobs:
       - name: Prepare build environment
         run: |
           xbps-install -Syu || xbps-install -u xbps && xbps-install -Syu
-          xbps-install -y xtools git openssl ca-certificates
-          cd void-packages
-          echo "XBPS_ALLOW_RESTRICTED=yes" >> etc/conf
-          echo "XBPS_MAKEJOBS=$(nproc)" >> etc/conf
-          ./xbps-src binary-bootstrap
+          xbps-install -y xtools git openssl ca-certificates shadow
+          
+          # xbps-src strictly forbids running as root
+          useradd -m -s /bin/bash builder || true
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+
+          runuser -u builder -- bash << 'EOF'
+            set -euo pipefail
+            cd "$GITHUB_WORKSPACE/void-packages"
+            echo "XBPS_ALLOW_RESTRICTED=yes" >> etc/conf
+            echo "XBPS_MAKEJOBS=$(nproc)" >> etc/conf
+            ./xbps-src binary-bootstrap
+          EOF
 
       - name: Link and build custom templates
         run: |
-          for pkg in cgo-void-repo/srcpkgs/*; do
-            if [ -d "$pkg" ] && [ -f "$pkg/template" ]; then
-              pkgname=$(basename "$pkg")
-              echo "==> Linking $pkgname..."
-              ln -sf "../../$pkg" "void-packages/srcpkgs/$pkgname"
-              echo "==> Building $pkgname with xbps-src..."
-              cd void-packages
-              ./xbps-src pkg "$pkgname"
-              cd ..
-            fi
-          done
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+          runuser -u builder -- bash << 'EOF'
+            set -euo pipefail
+            cd "$GITHUB_WORKSPACE"
+            for pkg in cgo-void-repo/srcpkgs/*; do
+              if [ -d "$pkg" ] && [ -f "$pkg/template" ]; then
+                pkgname=$(basename "$pkg")
+                echo "==> Linking $pkgname..."
+                ln -sf "../../$pkg" "void-packages/srcpkgs/$pkgname"
+                echo "==> Building $pkgname with xbps-src..."
+                cd void-packages
+                ./xbps-src pkg "$pkgname"
+                cd "$GITHUB_WORKSPACE"
+              fi
+            done
+          EOF
 
       - name: Index and sign packages
         env:
           RSA_KEY: ${{ secrets.RSA_PRIVATE_KEY }}
         run: |
-          ARCH=$(xbps-uhelper arch)
-          DIST_DIR="cgo-void-repo/docs/$ARCH"
-          mkdir -p "$DIST_DIR"
-          
-          # Copy built binary packages to docs directory for GitHub Pages
-          find void-packages/hostdir/binpkgs -type f -name "*.xbps" -exec cp -uv {} "$DIST_DIR/" \; || true
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+          runuser -u builder -- env RSA_KEY="$RSA_KEY" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" bash << 'EOF'
+            set -euo pipefail
+            cd "$GITHUB_WORKSPACE"
+            ARCH=$(xbps-uhelper arch)
+            DIST_DIR="cgo-void-repo/docs/$ARCH"
+            mkdir -p "$DIST_DIR"
+            
+            # Copy built binary packages to docs directory for GitHub Pages
+            find void-packages/hostdir/binpkgs -type f -name "*.xbps" -exec cp -uv {} "$DIST_DIR/" \; || true
 
-          cd "$DIST_DIR"
-          if [ -n "$RSA_KEY" ]; then
-            echo "==> Signing repodata using GitHub Secret RSA_PRIVATE_KEY..."
-            echo "$RSA_KEY" > signing.key
-            chmod 600 signing.key
-            xbps-rindex -a ./*.xbps || true
-            xbps-rindex --sign --signedby "CasperGamingOne Void Repository" --privkey signing.key . || true
-            xbps-rindex -c . || true
-            rm -f signing.key
-          else
-            echo "==> Notice: RSA_PRIVATE_KEY secret not found, indexing without signature..."
-            xbps-rindex -a ./*.xbps || true
-          fi
+            cd "$DIST_DIR"
+            if [ -n "${RSA_KEY:-}" ]; then
+              echo "==> Signing repodata using GitHub Secret RSA_PRIVATE_KEY..."
+              echo "$RSA_KEY" > signing.key
+              chmod 600 signing.key
+              xbps-rindex -a ./*.xbps || true
+              xbps-rindex --sign --signedby "CasperGamingOne Void Repository" --privkey signing.key . || true
+              xbps-rindex -c . || true
+              rm -f signing.key
+            else
+              echo "==> Notice: RSA_PRIVATE_KEY secret not found, indexing without signature..."
+              xbps-rindex -a ./*.xbps || true
+            fi
+          EOF
 
       - name: Fix workspace permissions for artifact upload
         run: |
-          chmod -R 777 cgo-void-repo/docs
+          chmod -R 777 "$GITHUB_WORKSPACE/cgo-void-repo/docs"
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
