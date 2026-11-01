@@ -9,6 +9,7 @@ on:
     paths:
       - 'srcpkgs/**'
       - 'docs/**'
+      - 'scripts/**'
       - '.github/workflows/**'
   workflow_dispatch:
 
@@ -23,6 +24,7 @@ concurrency:
 
 jobs:
   build:
+    name: Build Packages & Generate Site
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/void-linux/void-glibc-full:latest
@@ -43,7 +45,7 @@ jobs:
       - name: Prepare build environment
         run: |
           xbps-install -Syu || xbps-install -u xbps && xbps-install -Syu
-          xbps-install -y xtools git openssl ca-certificates shadow
+          xbps-install -y xtools git openssl ca-certificates shadow python3
           
           # Add builder to xbuilder group so xbps-uchroot (SUID root) can be used
           useradd -m -G xbuilder -s /bin/bash builder || usermod -aG xbuilder builder
@@ -77,7 +79,7 @@ jobs:
             done
           EOF
 
-      - name: Index and sign packages
+      - name: Generate static website & index packages
         env:
           RSA_KEY: ${{ secrets.RSA_PRIVATE_KEY }}
         run: |
@@ -86,12 +88,17 @@ jobs:
             set -euo pipefail
             cd "$GITHUB_WORKSPACE"
             ARCH=$(xbps-uhelper arch)
-            DIST_DIR="cgo-void-repo/docs/$ARCH"
+            SITE_DIR="cgo-void-repo/site"
+            DIST_DIR="${SITE_DIR}/${ARCH}"
             mkdir -p "$DIST_DIR"
-            
-            # Copy built binary packages to docs directory for GitHub Pages
+
+            # 1. Run dynamic site generator
+            python3 cgo-void-repo/scripts/generate-web.py "$SITE_DIR"
+
+            # 2. Copy built packages into architecture directory for web repo
             find void-packages/hostdir/binpkgs -type f -name "*.xbps" -exec cp -uv {} "$DIST_DIR/" \; || true
 
+            # 3. Sign repodata
             cd "$DIST_DIR"
             if [ -n "${RSA_KEY:-}" ]; then
               echo "==> Signing repodata using GitHub Secret RSA_PRIVATE_KEY..."
@@ -109,31 +116,49 @@ jobs:
 
       - name: Fix workspace permissions for artifact upload
         run: |
-          chmod -R 777 "$GITHUB_WORKSPACE/cgo-void-repo/docs"
+          chmod -R 777 "$GITHUB_WORKSPACE/cgo-void-repo/site"
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: cgo-void-repo/docs
+          path: cgo-void-repo/site
 
-      - name: Upload Release Assets Artifact
+      - name: Upload Built Packages Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: xbps-packages
-          path: cgo-void-repo/docs/**/*
+          name: xbps-site-and-packages
+          path: cgo-void-repo/site/**/*
 
-  deploy:
+  deploy-pages:
+    name: Deploy to GitHub Pages
     needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Download built site artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: xbps-site-and-packages
+          path: site
+
+      # 1. Push to gh-pages branch (creates/updates gh-pages branch automatically)
+      - name: Push to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          publish_branch: gh-pages
+          force_orphan: true
+
+      # 2. Deploy directly via GitHub Pages Actions API
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
 
   release:
+    name: Publish GitHub Release
     needs: build
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
@@ -141,7 +166,7 @@ jobs:
       - name: Download built packages
         uses: actions/download-artifact@v4
         with:
-          name: xbps-packages
+          name: xbps-site-and-packages
           path: dist
 
       - name: Create GitHub Release
