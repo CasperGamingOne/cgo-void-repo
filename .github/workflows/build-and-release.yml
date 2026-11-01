@@ -9,6 +9,7 @@ on:
     paths:
       - 'srcpkgs/**'
       - 'docs/**'
+      - '.github/workflows/**'
   workflow_dispatch:
 
 permissions:
@@ -21,10 +22,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/void-linux/xbps-src-masterdir:latest
+      image: ghcr.io/void-linux/void-glibc-full:latest
       options: --privileged
 
     steps:
@@ -42,9 +43,10 @@ jobs:
       - name: Prepare build environment
         run: |
           xbps-install -Syu || xbps-install -u xbps && xbps-install -Syu
-          xbps-install -y xtools openssl git
+          xbps-install -y xtools git openssl ca-certificates
           cd void-packages
           echo "XBPS_ALLOW_RESTRICTED=yes" >> etc/conf
+          echo "XBPS_MAKEJOBS=$(nproc)" >> etc/conf
           ./xbps-src binary-bootstrap
 
       - name: Link and build custom templates
@@ -53,7 +55,7 @@ jobs:
             if [ -d "$pkg" ] && [ -f "$pkg/template" ]; then
               pkgname=$(basename "$pkg")
               echo "==> Linking $pkgname..."
-              ln -s "../../$pkg" "void-packages/srcpkgs/$pkgname"
+              ln -sf "../../$pkg" "void-packages/srcpkgs/$pkgname"
               echo "==> Building $pkgname with xbps-src..."
               cd void-packages
               ./xbps-src pkg "$pkgname"
@@ -69,8 +71,8 @@ jobs:
           DIST_DIR="cgo-void-repo/docs/$ARCH"
           mkdir -p "$DIST_DIR"
           
-          # Copy built packages to docs arch directory for GitHub Pages
-          find void-packages/hostdir/binpkgs -name "*.xbps" -exec cp -uv {} "$DIST_DIR/" \; || true
+          # Copy built binary packages to docs directory for GitHub Pages
+          find void-packages/hostdir/binpkgs -type f -name "*.xbps" -exec cp -uv {} "$DIST_DIR/" \; || true
 
           cd "$DIST_DIR"
           if [ -n "$RSA_KEY" ]; then
@@ -78,7 +80,7 @@ jobs:
             echo "$RSA_KEY" > signing.key
             chmod 600 signing.key
             xbps-rindex -a ./*.xbps || true
-            xbps-rindex --sign --signedby "CasperGamingOne Void Repository" --privkey signing.key .
+            xbps-rindex --sign --signedby "CasperGamingOne Void Repository" --privkey signing.key . || true
             xbps-rindex -c . || true
             rm -f signing.key
           else
@@ -86,18 +88,46 @@ jobs:
             xbps-rindex -a ./*.xbps || true
           fi
 
+      - name: Fix workspace permissions for artifact upload
+        run: |
+          chmod -R 777 cgo-void-repo/docs
+
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: cgo-void-repo/docs
 
+      - name: Upload Release Assets Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xbps-packages
+          path: cgo-void-repo/docs/**/*
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
 
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download built packages
+        uses: actions/download-artifact@v4
+        with:
+          name: xbps-packages
+          path: dist
+
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-          files: cgo-void-repo/docs/**/*
+          files: dist/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

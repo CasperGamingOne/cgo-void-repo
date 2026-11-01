@@ -144,7 +144,7 @@ sudo xbps-install <pkgname>
    git push origin v1.0.0
    ```
 3. The GitHub Actions workflow (`.github/workflows/build-and-release.yml`):
-   - Compiles packages inside `ghcr.io/void-linux/xbps-src-masterdir:latest`.
+   - Compiles packages inside `ghcr.io/void-linux/void-glibc-full:latest`.
    - Signs repodata using repository secret `RSA_PRIVATE_KEY`.
    - Automatically publishes the website and packages to GitHub Pages.
    - Attaches binary packages to GitHub Releases.
