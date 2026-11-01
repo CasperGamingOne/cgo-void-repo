@@ -53,24 +53,28 @@ jobs:
 
           runuser -u builder -g xbuilder -- bash << 'EOF'
             set -euo pipefail
+            git config --global --add safe.directory "*"
             cd "$GITHUB_WORKSPACE/void-packages"
             echo "XBPS_CHROOT_CMD=uchroot" >> etc/conf
             echo "XBPS_ALLOW_RESTRICTED=yes" >> etc/conf
+            echo "XBPS_USE_BUILD_MTIME=yes" >> etc/conf
             echo "XBPS_MAKEJOBS=$(nproc)" >> etc/conf
             ./xbps-src binary-bootstrap
           EOF
 
-      - name: Link and build custom templates
+      - name: Copy and build custom templates
         run: |
           chown -R builder:builder "$GITHUB_WORKSPACE"
           runuser -u builder -g xbuilder -- bash << 'EOF'
             set -euo pipefail
+            export GIT_DISCOVERY_ACROSS_FILESYSTEM=1
             cd "$GITHUB_WORKSPACE"
             for pkg in cgo-void-repo/srcpkgs/*; do
               if [ -d "$pkg" ] && [ -f "$pkg/template" ]; then
                 pkgname=$(basename "$pkg")
-                echo "==> Linking $pkgname..."
-                ln -sf "../../$pkg" "void-packages/srcpkgs/$pkgname"
+                echo "==> Copying $pkgname into void-packages/srcpkgs..."
+                rm -rf "void-packages/srcpkgs/$pkgname"
+                cp -a "$pkg" "void-packages/srcpkgs/$pkgname"
                 echo "==> Building $pkgname with xbps-src..."
                 cd void-packages
                 ./xbps-src pkg "$pkgname"
@@ -86,6 +90,7 @@ jobs:
           chown -R builder:builder "$GITHUB_WORKSPACE"
           runuser -u builder -g xbuilder -- env RSA_KEY="$RSA_KEY" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" bash << 'EOF'
             set -euo pipefail
+            export GIT_DISCOVERY_ACROSS_FILESYSTEM=1
             cd "$GITHUB_WORKSPACE"
             ARCH=$(xbps-uhelper arch)
             SITE_DIR="cgo-void-repo/site"

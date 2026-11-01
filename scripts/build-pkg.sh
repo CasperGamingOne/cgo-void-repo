@@ -35,10 +35,10 @@ if command -v xlint >/dev/null 2>&1; then
     xlint "${TEMPLATE_SRC}/template" || true
 fi
 
-# Link template into void-packages
-echo "--> Linking ${PKGNAME} into void-packages/srcpkgs..."
+# Copy template into void-packages (xbps-src treats symlinks as subpackages)
+echo "--> Copying ${PKGNAME} into void-packages/srcpkgs..."
 rm -rf "${TEMPLATE_DST}"
-ln -s "${TEMPLATE_SRC}" "${TEMPLATE_DST}"
+cp -a "${TEMPLATE_SRC}" "${TEMPLATE_DST}"
 
 # Build package
 echo "--> Building ${PKGNAME} with xbps-src..."
