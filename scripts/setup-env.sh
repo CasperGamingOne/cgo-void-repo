@@ -42,6 +42,7 @@ if [ ! -f "${VOID_PACKAGES_DIR}/etc/conf" ]; then
     echo "--> Creating default ${VOID_PACKAGES_DIR}/etc/conf..."
     cat << 'EOF' > "${VOID_PACKAGES_DIR}/etc/conf"
 # Configuration for xbps-src
+XBPS_CHROOT_CMD=uchroot
 XBPS_ALLOW_RESTRICTED=yes
 XBPS_MAKEJOBS=$(nproc)
 EOF

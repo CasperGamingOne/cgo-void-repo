@@ -160,3 +160,4 @@ sudo xbps-install <pkgname>
 | `XLibre dependency conflict` | Package declares conflicting xorg-server | Change dependency to modular X11 libs (e.g. `libX11-devel`). |
 | `GitHub Pages 404 on .xbps` | Jekyll filtering unlisted extensions | Verify `docs/.nojekyll` exists and is tracked in git. |
 | `Checksum mismatch` | Source tarball changed upstream | Run `xgensum -f srcpkgs/<pkg>/template`. |
+| `failed to write to /proc/self/uid_map` | Docker/CI blocking user namespaces | Set `XBPS_CHROOT_CMD=uchroot` and add user to `xbuilder` group. |

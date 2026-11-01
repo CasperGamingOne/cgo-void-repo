@@ -45,13 +45,14 @@ jobs:
           xbps-install -Syu || xbps-install -u xbps && xbps-install -Syu
           xbps-install -y xtools git openssl ca-certificates shadow
           
-          # xbps-src strictly forbids running as root
-          useradd -m -s /bin/bash builder || true
+          # Add builder to xbuilder group so xbps-uchroot (SUID root) can be used
+          useradd -m -G xbuilder -s /bin/bash builder || usermod -aG xbuilder builder
           chown -R builder:builder "$GITHUB_WORKSPACE"
 
-          runuser -u builder -- bash << 'EOF'
+          runuser -u builder -g xbuilder -- bash << 'EOF'
             set -euo pipefail
             cd "$GITHUB_WORKSPACE/void-packages"
+            echo "XBPS_CHROOT_CMD=uchroot" >> etc/conf
             echo "XBPS_ALLOW_RESTRICTED=yes" >> etc/conf
             echo "XBPS_MAKEJOBS=$(nproc)" >> etc/conf
             ./xbps-src binary-bootstrap
@@ -60,7 +61,7 @@ jobs:
       - name: Link and build custom templates
         run: |
           chown -R builder:builder "$GITHUB_WORKSPACE"
-          runuser -u builder -- bash << 'EOF'
+          runuser -u builder -g xbuilder -- bash << 'EOF'
             set -euo pipefail
             cd "$GITHUB_WORKSPACE"
             for pkg in cgo-void-repo/srcpkgs/*; do
@@ -81,7 +82,7 @@ jobs:
           RSA_KEY: ${{ secrets.RSA_PRIVATE_KEY }}
         run: |
           chown -R builder:builder "$GITHUB_WORKSPACE"
-          runuser -u builder -- env RSA_KEY="$RSA_KEY" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" bash << 'EOF'
+          runuser -u builder -g xbuilder -- env RSA_KEY="$RSA_KEY" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" bash << 'EOF'
             set -euo pipefail
             cd "$GITHUB_WORKSPACE"
             ARCH=$(xbps-uhelper arch)
