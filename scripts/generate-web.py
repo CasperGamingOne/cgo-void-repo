@@ -312,10 +312,7 @@ sudo xbps-install &lt;package-name&gt;</pre>
 
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">
-            🚀 Submit Request on GitHub
-          </button>
-          <button type="button" id="copy-request-md-btn" class="btn btn-secondary">
-            📋 Copy Markdown
+            🚀 Submit Package Request
           </button>
         </div>
 
