@@ -1,0 +1,49 @@
+# License & Usage Terms
+
+This repository contains open-source code and build scripts alongside my own personal branding and creative assets.
+
+---
+
+## 1. Software, Scripts & Packaging Code (MIT License)
+
+The source code, build scripts, package templates, automation workflows, and configuration files in this repository are licensed under the **MIT License**:
+
+```text
+MIT License
+
+Copyright (c) 2026 CasperGamingOne
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+---
+
+## 2. Personal Branding, Logos & Creative Assets (Mine and Only Mine)
+
+All branding, logos, banners, avatars, and project names are **mine personally and only mine** (**CasperGamingOne** and **Games4Everyone**).
+
+* **Excluded from the MIT License**: The MIT License applies exclusively to the software, scripts, templates, and technical configuration. It does **not** grant any permissions to use or copy my personal branding.
+* **Protected Assets**:
+  * The name **"CasperGamingOne"**
+  * The name **"Games4Everyone"**
+  * The repository title and banner identity **"cgo-void-repo"**
+  * My personal avatar / logo (`docs/assets/personal-logo.jpeg`)
+  * The **Games4Everyone** logo (`docs/assets/games4everyone-logo.png`)
+  * The custom banner artwork (`docs/assets/banner.jpeg`)
+* **No Permission Granted**: You do not have permission to use, copy, remix, or distribute my personal branding, avatar, logos, or banner for your own projects, websites, or repositories without my direct personal permission.

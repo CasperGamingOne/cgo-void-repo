@@ -81,3 +81,11 @@ echo "repository=https://caspergamingone.github.io/cgo-void-repo/x86_64" | sudo 
 # 3. Synchronize repository index
 sudo xbps-install -S
 ```
+
+---
+
+## 📄 License & Personal Branding
+
+* **Software & Scripts**: The packaging templates, build scripts, automation code, and configuration files are licensed under the [MIT License](LICENSE).
+* **Personal Branding & Assets**: All branding, logos, avatars, custom banners, and the names **CasperGamingOne** and **Games4Everyone** are **mine personally and only mine**. They are not included under the MIT License and may not be reused or redistributed without my personal permission. See [LICENSE](LICENSE) for full details.
+

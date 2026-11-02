@@ -250,7 +250,10 @@ sudo xbps-install &lt;package-name&gt;</pre>
       <img src="assets/games4everyone-logo.png" alt="Games4Everyone" class="footer-logo">
       <span><strong>Games4Everyone</strong> • CasperGamingOne</span>
     </div>
-    <p>Powered by <a href="https://voidlinux.org" target="_blank" rel="noopener">Void Linux</a> & <a href="https://pages.github.com" target="_blank" rel="noopener">GitHub Pages</a> • <a href="https://github.com/CasperGamingOne/cgo-void-repo">Source Repository</a></p>
+    <p>Powered by <a href="https://voidlinux.org" target="_blank" rel="noopener">Void Linux</a> & <a href="https://pages.github.com" target="_blank" rel="noopener">GitHub Pages</a> • <a href="https://github.com/CasperGamingOne/cgo-void-repo">Source Repository</a> • <a href="https://github.com/CasperGamingOne/cgo-void-repo/blob/main/LICENSE">License</a></p>
+    <p style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-muted);">
+      Repository code & templates licensed under MIT. Personal branding, logos, banner, and names are exclusively mine (CasperGamingOne / Games4Everyone). All rights reserved.
+    </p>
   </div>
 </footer>
 
