@@ -192,6 +192,7 @@ jobs:
             # 1. Run dynamic site generator
             python3 "$GITHUB_WORKSPACE/cgo-void-repo/scripts/generate-web.py" "$SITE_DIR"
             cp -a "$GITHUB_WORKSPACE/cgo-void-repo/docs/style.css" "$GITHUB_WORKSPACE/cgo-void-repo/docs/app.js" "$SITE_DIR/" 2>/dev/null || true
+            cp -a "$GITHUB_WORKSPACE/cgo-void-repo/docs/assets" "$SITE_DIR/" 2>/dev/null || true
             touch "$SITE_DIR/.nojekyll"
 
             # 2. Index and sign both distribution directories

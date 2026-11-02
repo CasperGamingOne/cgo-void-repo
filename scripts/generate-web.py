@@ -407,34 +407,6 @@ sudo xbps-install -S noctalia umbriel vmware-workstation megasync</pre>
     </div>
   </section>
 
-  <!-- Ecosystem Cards -->
-  <section class="section" id="ecosystem">
-    <h2 class="section-title">🌐 Ecosystem & Projects</h2>
-    <div class="grid-2">
-      <div class="card">
-        <h3>🎮 Games4Everyone</h3>
-        <p style="color: var(--text-secondary); margin: 0.5rem 0 1rem 0;">
-          Entertainment, modern gaming platforms, and desktop workstation tooling optimized for independence and performance.
-        </p>
-        <div class="badges">
-          <span class="badge">Void Linux</span>
-          <span class="badge">Gaming</span>
-          <span class="badge">Wayland</span>
-        </div>
-      </div>
-      <div class="card">
-        <h3>🦾 Google Antigravity</h3>
-        <p style="color: var(--text-secondary); margin: 0.5rem 0 1rem 0;">
-          Agent-first AI orchestration desktop platform and IDE packaged natively for Void Linux with complete library support.
-        </p>
-        <div class="badges">
-          <span class="badge">Antigravity 2.0</span>
-          <span class="badge">Multi-Agent</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
 </main>
 
 <footer class="footer">
@@ -488,7 +460,9 @@ def main():
     assets_dir = repo_root / "assets"
     
     docs_dir = repo_root / "docs"
-    # Destination directory for the website
+    assets_dir = repo_root / "assets"
+    if not assets_dir.is_dir():
+        assets_dir = docs_dir / "assets"
     site_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else docs_dir
     site_dir.mkdir(parents=True, exist_ok=True)
 
