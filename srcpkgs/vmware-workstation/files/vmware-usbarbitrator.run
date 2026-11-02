@@ -1,0 +1,4 @@
+#!/bin/sh
+exec 2>&1
+modprobe -q vmmon || true
+exec /usr/lib/vmware/bin/vmware-usbarbitrator -f

@@ -63,6 +63,15 @@
     "maintainer": "CasperGamingOne <caspergamingone@proton.me>"
   },
   {
+    "pkgname": "vmware-workstation",
+    "version": "26H1u1",
+    "revision": "1",
+    "short_desc": "Industry standard for running multiple operating systems on Linux",
+    "homepage": "https://www.vmware.com/products/workstation-pro.html",
+    "license": "custom:Proprietary",
+    "maintainer": "CasperGamingOne <caspergamingone@proton.me>"
+  },
+  {
     "pkgname": "xdg-desktop-portal-umbriel",
     "version": "0.1.0",
     "revision": "1",

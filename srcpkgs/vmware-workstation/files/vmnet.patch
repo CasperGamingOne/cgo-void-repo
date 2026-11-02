@@ -1,0 +1,41 @@
+diff --git a/vmnet-only/Makefile b/vmnet-only/Makefile
+--- a/vmnet-only/Makefile
++++ b/vmnet-only/Makefile
+@@ -40,8 +40,11 @@ else
+ INCLUDE      += -I$(SRCROOT)/shared
+ endif
+ 
+-
+-VM_UNAME = $(shell uname -r)
++ifdef KVERSION
++ VM_UNAME = $(KVERSION)
++else
++ VM_UNAME = $(shell uname -r)
++endif
+ 
+ # Header directory for the running kernel
+ ifdef LINUXINCLUDE
+diff --git a/vmnet-only/driver.c b/vmnet-only/driver.c
+--- a/vmnet-only/driver.c
++++ b/vmnet-only/driver.c
+@@ -1397,7 +1397,7 @@ VNetFreeInterfaceList --
+  */
+ 
+ void
+-VNetFreeInterfaceList()
++VNetFreeInterfaceList(void)
+ {
+    while (vnetInterfaces != NULL) {
+       VNetInterface *next = vnetInterfaces->next;
+diff --git a/vmnet-only/smac_compat.c b/vmnet-only/smac_compat.c
+--- a/vmnet-only/smac_compat.c
++++ b/vmnet-only/smac_compat.c
+@@ -77,7 +77,7 @@ SMACL_GetUptime --
+  */
+ 
+ unsigned long SMACINT
+-SMACL_GetUptime()
++SMACL_GetUptime(void)
+ {
+    return jiffies;
+ }

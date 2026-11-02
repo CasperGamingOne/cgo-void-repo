@@ -1,0 +1,146 @@
+# Template file for 'vmware-workstation'
+pkgname=vmware-workstation
+version=26H1u1
+revision=1
+_buildver=25688693
+_installer_ver=3.1.0
+archs="x86_64"
+create_wrksrc=yes
+hostmakedepends="sqlite tar patch"
+depends="dkms fuse gtkmm libcanberra libaio pcsclite hicolor-icon-theme
+ libxcrypt-compat libxml2 gtk+3 gcr sqlite"
+short_desc="Industry standard for running multiple operating systems on Linux"
+maintainer="CasperGamingOne <caspergamingone@proton.me>"
+license="custom:Proprietary"
+homepage="https://www.vmware.com/products/workstation-pro.html"
+distfiles="https://archive.org/download/VMware-Workstation-Full-${version}-${_buildver}.x86_64/VMware-Workstation-Full-${version}-${_buildver}.x86_64.bundle"
+checksum=da823c853cc7e57be7b9b070c8aed20fe9d75fd519ae6f175ab1dafc7283002e
+skip_extraction="VMware-Workstation-Full-${version}-${_buildver}.x86_64.bundle"
+restricted=yes
+nostrip=yes
+noshlibprovides=yes
+noverifyrdeps=yes
+python_version=ignore
+triggers="dkms"
+dkms_modules="vmware-workstation ${version}"
+
+do_install() {
+	local bundle="${XBPS_SRCDISTDIR}/${pkgname}-${version}/VMware-Workstation-Full-${version}-${_buildver}.x86_64.bundle"
+
+	msg_normal "Extracting VMware Workstation bundle...\n"
+	bash "${bundle}" --extract extracted
+
+	vmkdir usr/bin
+	vmkdir usr/lib/vmware
+	vmkdir usr/lib/vmware/setup
+	vmkdir usr/lib/vmware/isoimages
+	vmkdir usr/lib/vmware-vix
+	vmkdir usr/lib/vmware-ovftool
+	vmkdir usr/lib/vmware-installer/${_installer_ver}
+	vmkdir usr/include/vmware-vix
+	vmkdir usr/share
+	vmkdir etc/vmware
+	vmkdir etc/vmware-vix
+	vmkdir etc/vmware-installer
+	vmkdir usr/lib/modprobe.d
+	vmkdir usr/lib/modules-load.d
+	vmkdir etc/sv/vmware-networks
+	vmkdir etc/sv/vmware-usbarbitrator
+	vmkdir var/lib/vmware/"Shared VMs"
+
+	cd extracted
+
+	# Desktop entries, icons, man pages
+	cp -r vmware-workstation/share/* \
+		vmware-network-editor-ui/share/* vmware-other-apps/share/* \
+		"${DESTDIR}/usr/share"
+	[ -d vmware-workstation/man ] && cp -r vmware-workstation/man "${DESTDIR}/usr/share"
+
+	# Executables
+	cp -r vmware-workstation/bin/* vmware-vmx/{,s}bin/* \
+		vmware-vix-core/bin/* vmware-vprobe/bin/* \
+		"${DESTDIR}/usr/bin"
+
+	# Internal libraries and components
+	cp -r vmware-workstation/lib/* vmware-other-apps/lib/* \
+		vmware-vmx/{lib/*,roms} vmware-vprobe/lib/* \
+		vmware-usbarbitrator/bin vmware-network-editor/lib \
+		"${DESTDIR}/usr/lib/vmware"
+
+	cp -r vmware-player-setup/vmware-config "${DESTDIR}/usr/lib/vmware/setup"
+	cp -r vmware-vix-lib-Workstation1700/lib/Workstation-17.0.0 \
+		vmware-vix-core/{lib/*,vixwrapper-config.txt} \
+		"${DESTDIR}/usr/lib/vmware-vix"
+	cp -r vmware-ovftool/* "${DESTDIR}/usr/lib/vmware-ovftool"
+	cp -r vmware-installer/{python,sopython,vmis,vmis-launcher,vmware-installer,vmware-installer.py} \
+		"${DESTDIR}/usr/lib/vmware-installer/${_installer_ver}"
+	cp -r vmware-vix-core/include/* "${DESTDIR}/usr/include/vmware-vix"
+
+	# Windows Guest tools ISO
+	install -Dm 644 "vmware-tools-windows/windows.iso" \
+		"${DESTDIR}/usr/lib/vmware/isoimages/windows.iso"
+
+	# Cleanup unnecessary OVF tool metadata
+	rm -f "${DESTDIR}/usr/lib/vmware-ovftool"/{vmware-eula.rtf,open_source_licenses.txt,manifest.xml}
+
+	# DKMS sources setup
+	local dkms_dir="${DESTDIR}/usr/src/vmware-workstation-${version}"
+	vmkdir usr/src/vmware-workstation-${version}
+	install -m 644 "${FILESDIR}/Makefile" "${dkms_dir}/Makefile"
+	install -m 644 "${FILESDIR}/dkms.conf" "${dkms_dir}/dkms.conf"
+	sed -i -e "s/@PKGVER@/${version}/g" "${dkms_dir}/dkms.conf"
+
+	tar -xf "vmware-vmx/lib/modules/source/vmmon.tar" -C "${dkms_dir}"
+	tar -xf "vmware-vmx/lib/modules/source/vmnet.tar" -C "${dkms_dir}"
+	patch -p1 -d "${dkms_dir}" < "${FILESDIR}/vmmon.patch"
+	patch -p1 -d "${dkms_dir}" < "${FILESDIR}/vmnet.patch"
+	rm -rf "${DESTDIR}/usr/lib/vmware/modules/source"
+
+	# Setup SQLite database for vmware-installer
+	local db="${DESTDIR}/etc/vmware-installer/database"
+	sqlite3 "${db}" "CREATE TABLE settings(key VARCHAR PRIMARY KEY, value VARCHAR NOT NULL, component_name VARCHAR NOT NULL);"
+	sqlite3 "${db}" "INSERT INTO settings(key,value,component_name) VALUES('db.schemaVersion','2','vmware-installer');"
+	sqlite3 "${db}" "CREATE TABLE components(id INTEGER PRIMARY KEY, name VARCHAR NOT NULL, version VARCHAR NOT NULL, buildNumber INTEGER NOT NULL, component_core_id INTEGER NOT NULL, longName VARCHAR NOT NULL, description VARCHAR, type INTEGER NOT NULL);"
+	sqlite3 "${db}" "INSERT INTO components(name,version,buildNumber,component_core_id,longName,description,type) VALUES('vmware-workstation','${version}',${_buildver},1,'VMware Workstation','VMware Workstation',1);"
+
+	# Configurations and kernel loading
+	install -m 644 "${FILESDIR}/config" "${DESTDIR}/etc/vmware/config"
+	install -m 644 "${FILESDIR}/vmware-bootstrap" "${DESTDIR}/etc/vmware/bootstrap"
+	install -m 644 "${FILESDIR}/vmware-bootstrap" "${DESTDIR}/etc/vmware-installer/bootstrap"
+	install -m 644 "${FILESDIR}/vmware-vix-bootstrap" "${DESTDIR}/etc/vmware-vix/bootstrap"
+	install -m 644 "${FILESDIR}/vmware-fuse.conf" "${DESTDIR}/usr/lib/modprobe.d/vmware-fuse.conf"
+	printf "vmw_vmci\nvmmon\nvmnet\n" > "${DESTDIR}/usr/lib/modules-load.d/vmware.conf"
+
+	# Runit services
+	install -m 755 "${FILESDIR}/vmware-networks.run" "${DESTDIR}/etc/sv/vmware-networks/run"
+	install -m 755 "${FILESDIR}/vmware-networks.finish" "${DESTDIR}/etc/sv/vmware-networks/finish"
+	install -m 755 "${FILESDIR}/vmware-usbarbitrator.run" "${DESTDIR}/etc/sv/vmware-usbarbitrator/run"
+
+	# Permissions
+	chmod +x "${DESTDIR}/usr/bin"/*
+	chmod +x "${DESTDIR}/usr/lib/vmware/bin"/*
+	chmod +x "${DESTDIR}/usr/lib/vmware/setup"/*
+	chmod +x "${DESTDIR}/usr/lib/vmware-ovftool"/{ovftool,ovftool.bin}
+	chmod +x "${DESTDIR}/usr/lib/vmware-installer/${_installer_ver}"/{vmware-installer,vmis-launcher}
+
+	# SUID permissions required for hypervisor isolation and auth
+	chmod 4755 "${DESTDIR}/usr/bin"/vmware-authd
+	chmod 4755 "${DESTDIR}/usr/lib/vmware/bin"/{vmware-vmx,vmware-vmx-debug,vmware-vmx-stats}
+
+	# Symlinks to VMware bin utilities
+	for link in licenseTool vmware vmware-app-control vmware-fuseUI vmware-gksu \
+		vmware-modconfig vmware-netcfg vmware-tray vmware-zenity; do
+		ln -sf "/usr/lib/vmware/bin/${link}" "${DESTDIR}/usr/bin/${link}"
+	done
+
+	# Bypass vmware-modconfig GUI check since modules are managed via DKMS
+	for prog in vmware vmware-tray; do
+		if [ -f "${DESTDIR}/usr/bin/${prog}" ]; then
+			sed -i -e 's/if "$BINDIR"\/vmware-modconfig --appname=.*/if true ||/' "${DESTDIR}/usr/bin/${prog}"
+		fi
+	done
+}
+
+post_install() {
+	vlicense extracted/vmware-workstation/doc/EULA "VMware Workstation - EULA.txt"
+}

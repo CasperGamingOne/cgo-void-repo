@@ -1,0 +1,17 @@
+diff --git a/vmmon-only/Makefile b/vmmon-only/Makefile
+--- a/vmmon-only/Makefile
++++ b/vmmon-only/Makefile
+@@ -40,8 +40,11 @@ else
+ INCLUDE      += -I$(SRCROOT)/shared
+ endif
+ 
+-
+-VM_UNAME = $(shell uname -r)
++ifdef KVERSION
++ VM_UNAME = $(KVERSION)
++else
++ VM_UNAME = $(shell uname -r)
++endif
+ 
+ # Header directory for the running kernel
+ ifdef LINUXINCLUDE

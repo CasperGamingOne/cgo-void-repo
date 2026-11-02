@@ -162,6 +162,22 @@ These hard-won lessons prevent errors that cause builds and CI workflows to brea
   - Set `noverifyrdeps=yes` and explicitly declare all modular system dependencies in `depends="..."`.
   - Install udev rules to `/usr/lib/udev/rules.d/` and sysctl limits to `/usr/lib/sysctl.d/`.
 
+### Rule 12: Packaging Native C++23 / Meson Wayland Stacks (Noctalia, Umbriel, Greeter, Portal)
+- **The Context**: Modern Wayland desktop environments (Umbriel compositor, Noctalia shell, Noctalia Greeter, and Umbriel Portal) are built with Meson and standard C++23 targeting `wlroots0.20`.
+- **Key Packaging Solutions**:
+  1. *Generic CPU Portability*: Some upstream release profiles inject `-march=native -mtune=native`. In `post_patch()`, strip host-CPU flags (`vsed -i "s/'-march=native', '-mtune=native',//g" meson.build`) to guarantee binaries execute on all x86_64 machines.
+  2. *Systemd Isolation*: On Void Linux (runit init system), pass `-Dlocaled=disabled` to Meson so the compositor falls back gracefully to `xkbcommon` defaults instead of attempting to link `libsystemd`.
+  3. *Dependency Matching*: In Void Linux, header-only `nlohmann/json` is provided by `json-c++`, and markdown parsing by `libmd4c-devel`.
+
+### Rule 13: Packaging Hypervisors with DKMS Kernel Modules & Runit (VMware Workstation Pro)
+- **The Context**: VMware Workstation Pro is distributed as a self-extracting shell `.bundle`. It requires host kernel modules (`vmmon` and `vmnet`) and runtime background daemons for virtual networking and USB arbitrator.
+- **Key Packaging Solutions**:
+  1. *Extraction without Execution*: Use `skip_extraction="<bundle-name>"` and execute `bash "${bundle}" --extract extracted` in `do_install()`.
+  2. *DKMS Integration via Triggers*: Place patched module sources under `/usr/src/<pkgname>-<version>/` with `dkms.conf` and `Makefile`. Declare `triggers="dkms"` and `dkms_modules="<pkgname> <version>"` in the template. Void's native package manager triggers automatically compile and install kernel modules upon package installation and kernel updates.
+  3. *Bundled Python Runtimes*: VMware bundles an internal Python interpreter under `/usr/lib/vmware-installer/<ver>/python/`. Void's pre-pkg hook `03-rewrite-python-shebang.sh` will fail unless `python_version=ignore` is specified.
+  4. *Runit Services*: Provide `/etc/sv/vmware-networks` (bridge/NAT daemon) and `/etc/sv/vmware-usbarbitrator` (USB pass-through daemon).
+  5. *Modconfig GUI Bypass*: Replace `vmware-modconfig` GUI prompts in `/usr/bin/vmware` (`sed -i -e 's/if "$BINDIR"\/vmware-modconfig --appname=.*/if true ||/'`) because module building is delegated to DKMS.
+
 ---
 
 ## 6. Smart Workflow & Change Detection Architecture
