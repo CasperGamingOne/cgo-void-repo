@@ -73,7 +73,7 @@ jobs:
                   data = json.load(resp)
                   for asset in data.get('assets', []):
                       name = asset['name']
-                      if name.endswith('.xbps'):
+                      if name.endswith('.xbps') or name.endswith('.sig2') or name.endswith('-repodata'):
                           dl_url = asset['browser_download_url']
                           print(f'==> Downloading existing release asset: {name}')
                           urllib.request.urlretrieve(dl_url, os.path.join(dist_dir, name))
@@ -181,10 +181,11 @@ jobs:
             ls -la ./*.xbps || true
 
             if [ -n "${RSA_KEY:-}" ]; then
-              echo "==> Signing repodata using GitHub Secret RSA_PRIVATE_KEY..."
+              echo "==> Signing packages (.sig2) and repodata using GitHub Secret RSA_PRIVATE_KEY..."
               echo "$RSA_KEY" > signing.key
               chmod 600 signing.key
               xbps-rindex -a ./*.xbps || true
+              xbps-rindex --sign-pkg --privkey signing.key ./*.xbps || true
               xbps-rindex --sign --signedby "CasperGamingOne Void Repository" --privkey signing.key . || true
               xbps-rindex -c . || true
               rm -f signing.key

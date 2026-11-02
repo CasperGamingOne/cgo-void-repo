@@ -141,6 +141,15 @@ These hard-won lessons prevent errors that cause builds and CI workflows to brea
 - **Why It Fails**: GitHub enforces a strict 100.00 MB file limit on Git commits. Electron packages over 100 MB (e.g. `antigravity` at 157 MB and `antigravity-ide` at 153 MB) cause GitHub's pre-receive hook to decline the push with `GH001: Large files detected`.
 - **The Fix**: Distribute all `.xbps` binary packages and signed repodata via **GitHub Releases** (`/releases/latest/download`), which supports files up to 2 GB each. Dedicate **GitHub Pages** exclusively to the lightweight web interface and public `.pem` key (`< 2 MB` total).
 
+### Rule 10: Remote Signed Repositories Require Individual Package Signatures (`.sig2`)
+- **The Mistake**: Signing only the repodata index (`xbps-rindex --sign`) and omitting package signatures.
+- **Why It Fails**: When an XBPS client queries a remote signed repository, XBPS requires both the signed repodata and a companion signature file (`<pkg>.<arch>.xbps.sig2`) for every package downloaded. If `.sig2` is missing from the repository assets, `xbps-install` aborts with:
+  ```text
+  ERROR: [trans] failed to download `<pkg>' signature from `<repo-url>': Not Found
+  ERROR: Transaction failed! see above for errors.
+  ```
+- **The Fix**: Always sign binary packages with `xbps-rindex --sign-pkg --privkey <key> ./*.xbps` to produce `.sig2` files, sign the repository index with `xbps-rindex --sign`, and upload both `.xbps` and `.sig2` alongside repodata to the distribution release. Ensure the GitHub Actions secret `RSA_PRIVATE_KEY` is configured in repository secrets.
+
 ---
 
 ## 6. Smart Workflow & Change Detection Architecture

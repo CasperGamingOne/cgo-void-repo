@@ -46,11 +46,15 @@ for dir in ${ARCH_DIRS}; do
         continue
     fi
 
-    # 2. Sign repository index
+    # 2. Sign individual binary package archives (.sig2)
+    echo "--> Signing binary packages with private key..."
+    xbps-rindex --sign-pkg --privkey "${PRIVKEY}" ./*.xbps
+
+    # 3. Sign repository index
     echo "--> Signing repodata with private key..."
     xbps-rindex --sign --signedby "${SIGNED_BY}" --privkey "${PRIVKEY}" "${dir}"
 
-    # 3. Clean obsolete packages from index
+    # 4. Clean obsolete packages from index
     echo "--> Cleaning obsolete packages with xbps-rindex -c..."
     xbps-rindex -c "${dir}" || true
 done
