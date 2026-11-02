@@ -213,15 +213,12 @@ def generate_html(packages: list, base_url: str) -> str:
           <button type="button" class="arch-tab-btn" data-channel="generic">
             <span>📦 x86_64 (Generic / Compatibility)</span>
           </button>
-          <button type="button" class="arch-tab-btn" data-channel="dual">
-            <span>🔄 Layered Dual-Repo (Both)</span>
-          </button>
         </div>
 
         <!-- Channel 1: x86_64-v3 -->
         <div class="channel-view" id="view-channel-v3">
           <div class="channel-hint">
-            <strong>🚀 Best Performance:</strong> Compiled with <code>-march=x86-64-v3 -O3 -pipe</code> (AVX2, FMA, BMI1/2). Ideal for Intel Haswell (2013+) and AMD Zen (2017+) or newer. Contains both v3-optimized software and all universal packages.
+            <strong>🚀 Best Performance:</strong> Compiled with <code>-march=x86-64-v3 -O3 -pipe</code> (AVX2, FMA, BMI1/2). Ideal for Intel Haswell (2013+) and AMD Zen (2017+) or newer. Self-contained channel with all packages.
           </div>
           <div class="code-box">
             <button class="copy-btn" data-target="cmd-step2-v3">Copy</button>
@@ -232,23 +229,11 @@ def generate_html(packages: list, base_url: str) -> str:
         <!-- Channel 2: generic -->
         <div class="channel-view" id="view-channel-generic" style="display: none;">
           <div class="channel-hint">
-            <strong>📦 Maximum Compatibility:</strong> Standard baseline 64-bit compilation. Runs safely on any 64-bit x86 hardware, hypervisors, and legacy PCs without requiring AVX2.
+            <strong>📦 Maximum Compatibility:</strong> Standard baseline 64-bit compilation. Runs safely on any 64-bit x86 hardware, hypervisors, and legacy PCs. Self-contained channel with all packages.
           </div>
           <div class="code-box">
             <button class="copy-btn" data-target="cmd-step2-generic">Copy</button>
             <pre id="cmd-step2-generic">echo "repository=https://github.com/CasperGamingOne/cgo-void-repo/releases/download/rolling" | sudo tee /etc/xbps.d/10-cgo-void-repo.conf</pre>
-          </div>
-        </div>
-
-        <!-- Channel 3: dual -->
-        <div class="channel-view" id="view-channel-dual" style="display: none;">
-          <div class="channel-hint">
-            <strong>🔄 Dual Layered:</strong> Prioritizes <code>rolling-v3</code> for maximum performance, while keeping <code>rolling</code> as an automatic fallback.
-          </div>
-          <div class="code-box">
-            <button class="copy-btn" data-target="cmd-step2-dual">Copy</button>
-            <pre id="cmd-step2-dual">echo "repository=https://github.com/CasperGamingOne/cgo-void-repo/releases/download/rolling-v3" | sudo tee /etc/xbps.d/10-cgo-repo-v3.conf
-echo "repository=https://github.com/CasperGamingOne/cgo-void-repo/releases/download/rolling" | sudo tee /etc/xbps.d/20-cgo-repo.conf</pre>
           </div>
         </div>
 
@@ -502,8 +487,9 @@ def main():
     repo_keys_dir = repo_root / "repo-keys"
     assets_dir = repo_root / "assets"
     
+    docs_dir = repo_root / "docs"
     # Destination directory for the website
-    site_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else (repo_root / "docs")
+    site_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else docs_dir
     site_dir.mkdir(parents=True, exist_ok=True)
 
     base_url = "https://caspergamingone.github.io/cgo-void-repo"
@@ -531,6 +517,13 @@ def main():
         for img in assets_dir.glob("*"):
             if img.is_file():
                 shutil.copy2(img, dest_assets / img.name)
+
+    # Copy website static assets (CSS, JS, .nojekyll, pubkey)
+    if site_dir.resolve() != docs_dir.resolve():
+        for static_name in ["style.css", "app.js", ".nojekyll", "cgo-void-repo.rsa.pub", "cgo-void-repo.pem"]:
+            src = docs_dir / static_name
+            if src.is_file():
+                shutil.copy2(src, site_dir / static_name)
 
     print("==> Website generated successfully!")
 

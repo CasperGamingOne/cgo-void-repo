@@ -73,15 +73,6 @@ echo "repository=https://github.com/CasperGamingOne/cgo-void-repo/releases/downl
 sudo xbps-install -S
 ```
 
-### Option C: Dual-Layered Setup (v3 Priority + Fallback)
-
-```bash
-sudo wget -O /var/db/xbps/keys/cgo-void-repo.pem https://caspergamingone.github.io/cgo-void-repo/cgo-void-repo.pem
-echo "repository=https://github.com/CasperGamingOne/cgo-void-repo/releases/download/rolling-v3" | sudo tee /etc/xbps.d/10-cgo-repo-v3.conf
-echo "repository=https://github.com/CasperGamingOne/cgo-void-repo/releases/download/rolling" | sudo tee /etc/xbps.d/20-cgo-repo.conf
-sudo xbps-install -S
-```
-
 ---
 
 ## 📦 Available Packages

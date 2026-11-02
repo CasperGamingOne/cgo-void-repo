@@ -27,7 +27,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const channelViews = {
     v3: document.getElementById("view-channel-v3"),
     generic: document.getElementById("view-channel-generic"),
-    dual: document.getElementById("view-channel-dual"),
   };
 
   tabBtns.forEach((btn) => {
