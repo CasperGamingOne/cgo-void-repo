@@ -103,9 +103,11 @@ body:
   - type: input
     id: contact
     attributes:
-      label: "Contact for Direct Notifications (Discord DM & Email)"
-      description: "Provide your Discord User ID (or username) and/or Email. Our notification bot will DM you on Discord and send emails whenever this issue status updates (Accepted, In Progress, Completed, or Denied)."
-      placeholder: "Discord: 123456789012345678 (or @username) / Email: you@example.com"
+      label: "Discord for Status DM Alerts"
+      description: "Enter your Discord User ID (18-digit number) or Username (e.g. `username`). Our bot will send you direct messages whenever this issue is Accepted, In Progress, Completed, or Denied."
+      placeholder: "e.g. 123456789012345678 or @username"
+    validations:
+      required: true
 
   - type: textarea
     id: notes

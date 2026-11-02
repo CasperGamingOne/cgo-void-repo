@@ -106,8 +106,8 @@ document.addEventListener("DOMContentLoaded", () => {
       e.preventDefault();
       const data = getFormData();
 
-      if (!data.pkgname || !data.homepage || !data.upstream || !data.description) {
-        alert("Please complete the required fields: Package Name, Homepage, Source Repository, and Description.");
+      if (!data.pkgname || !data.homepage || !data.upstream || !data.description || !data.contact) {
+        alert("Please complete the required fields: Package Name, Homepage, Source Repository, Description, and Discord Handle.");
         return;
       }
 

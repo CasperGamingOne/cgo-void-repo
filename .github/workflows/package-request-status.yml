@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   notify-requester:
-    name: "Dispatch Discord DM & Email Status Alerts"
+    name: "Dispatch Discord DM Status Alert"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -23,15 +23,10 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Run Status Notification Dispatcher
+      - name: Run Discord DM Dispatcher
         env:
           GITHUB_EVENT_PATH: ${{ github.event_path }}
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
-          SMTP_HOST: ${{ secrets.SMTP_HOST }}
-          SMTP_PORT: ${{ secrets.SMTP_PORT }}
-          SMTP_USER: ${{ secrets.SMTP_USER }}
-          SMTP_PASS: ${{ secrets.SMTP_PASS }}
-          SMTP_FROM: ${{ secrets.SMTP_FROM }}
         run: |
           python3 scripts/notify-requester.py

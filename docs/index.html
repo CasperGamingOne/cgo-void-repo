@@ -260,8 +260,8 @@ sudo xbps-install &lt;package-name&gt;</pre>
             <input type="text" id="req-dependencies" class="form-control" placeholder="e.g. qt6-base, ffmpeg, libva, alsa-lib">
           </div>
           <div class="form-group">
-            <label class="form-label" for="req-contact">Direct Notifications (Discord DM & Email)</label>
-            <input type="text" id="req-contact" class="form-control" placeholder="Discord: 123456789012345678 (or @username) / Email: you@example.com">
+            <label class="form-label" for="req-contact">Discord for Status DM Alerts <span class="required">*</span></label>
+            <input type="text" id="req-contact" class="form-control" placeholder="18-digit Discord User ID or @username" required>
           </div>
         </div>
 
@@ -308,8 +308,8 @@ sudo xbps-install &lt;package-name&gt;</pre>
         <div class="form-notice-box">
           <div>💡</div>
           <div>
-            <strong>How Direct Notifications Work:</strong>
-            Submitting registers a GitHub Issue with an assigned <strong>Issue Tracking ID</strong> (e.g. <code>#12</code>). Whenever the status updates (<strong>Accepted</strong>, <strong>In Progress</strong>, <strong>Completed</strong>, or <strong>Denied</strong>), our automation bot directly sends you a <strong>Discord DM</strong> and an <strong>Email</strong> with progress updates!
+            <strong>How Direct Discord DMs Work:</strong>
+            Submitting registers a GitHub Issue with an assigned <strong>Issue Tracking ID</strong> (e.g. <code>#12</code>). Whenever the status updates (<strong>Accepted</strong>, <strong>In Progress</strong>, <strong>Completed</strong>, or <strong>Denied</strong>), our automation bot directly DMs you on Discord with live progress!
           </div>
         </div>
       </form>
