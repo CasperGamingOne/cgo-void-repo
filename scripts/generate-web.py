@@ -4,7 +4,7 @@ generate-web.py - Generate GitHub Pages website & package index for cgo-void-rep
 
 This script parses srcpkgs/*/template to extract package metadata, builds an
 interactive HTML portal and JSON index, bundles the public verification keys,
-and organizes architecture-specific package directories for GitHub Pages.
+copies branding assets, and organizes architecture-specific package directories.
 """
 
 import os
@@ -81,22 +81,61 @@ def generate_html(packages: list, base_url: str) -> str:
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>cgo-void-repo | CasperGamingOne's Void Linux Repository</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22><text y=%2226%22 font-size=%2224%22>🐧</text></svg>">
+  <link rel="icon" type="image/jpeg" href="assets/personal-logo.jpeg">
 </head>
 <body>
 
-<header>
-  <div class="container hero">
-    <div class="logo-circle">🐧</div>
-    <div class="hero-text">
+<!-- Navigation Bar -->
+<nav class="navbar">
+  <div class="container nav-content">
+    <a href="#" class="nav-brand">
+      <img src="assets/personal-logo.jpeg" alt="CasperGamingOne" class="nav-logo">
+      <div>
+        <span class="nav-title">cgo-void-repo</span>
+        <span class="nav-company">Games4Everyone</span>
+      </div>
+    </a>
+    <div class="nav-links">
+      <a href="#quick-install" class="nav-link">Install</a>
+      <a href="#packages" class="nav-link">Packages</a>
+      <a href="#ecosystem" class="nav-link">Ecosystem</a>
+      <a href="https://github.com/CasperGamingOne/cgo-void-repo" target="_blank" rel="noopener" class="nav-link">GitHub ↗</a>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero Banner Header -->
+<div class="banner-wrapper">
+  <img src="assets/banner.jpeg" alt="CasperGamingOne Banner" class="banner-img">
+  <div class="banner-overlay"></div>
+</div>
+
+<header class="container">
+  <div class="hero-card">
+    <div class="avatar-wrapper">
+      <img src="assets/personal-logo.jpeg" alt="CasperGamingOne Logo" class="hero-avatar">
+      <div class="company-badge-float" title="Games4Everyone">
+        <img src="assets/games4everyone-logo.png" alt="Games4Everyone Logo">
+      </div>
+    </div>
+    <div class="hero-details">
+      <div class="branding-tagline">
+        <span>🎮 Games4Everyone</span>
+        <span>•</span>
+        <span>Void Linux Repository</span>
+      </div>
       <h1>cgo-void-repo</h1>
       <p>Personal XBPS binary package repository for Void Linux by <strong>CasperGamingOne</strong></p>
       <div class="badges">
-        <span class="badge">Void Linux</span>
-        <span class="badge">XBPS Native</span>
-        <span class="badge">x86_64 / musl</span>
-        <span class="badge badge-xlibre">XLibre Compatible</span>
-        <span class="badge">Automated CI/CD</span>
+        <span class="badge badge-g4e">
+          <img src="assets/games4everyone-logo.png" style="width: 14px; height: 14px; border-radius: 3px;" alt="G4E">
+          Games4Everyone
+        </span>
+        <span class="badge badge-void">🐧 Void Linux</span>
+        <span class="badge">📦 XBPS Native</span>
+        <span class="badge">⚙️ x86_64</span>
+        <span class="badge">🧩 XLibre Ready</span>
+        <span class="badge">🔐 RSA Signed</span>
       </div>
     </div>
   </div>
@@ -105,13 +144,16 @@ def generate_html(packages: list, base_url: str) -> str:
 <main class="container">
 
   <!-- Quick Installation Section -->
-  <section class="section">
+  <section class="section" id="quick-install">
     <h2 class="section-title">⚡ Quick Installation</h2>
     <div class="card">
 
       <div class="step-item">
-        <div class="step-header">Step 1: Import Repository Public Key</div>
-        <div class="step-desc">Download and register the public RSA verification key into XBPS trusted keys:</div>
+        <div class="step-header">
+          <span class="step-num">1</span>
+          Import Public Verification Key
+        </div>
+        <div class="step-desc">Download and trust the official RSA signing key in your system's XBPS database:</div>
         <div class="code-box">
           <button class="copy-btn" data-target="cmd-step1">Copy</button>
           <pre id="cmd-step1">sudo wget -O /var/db/xbps/keys/cgo-void-repo.pem {base_url}/cgo-void-repo.pem</pre>
@@ -119,8 +161,11 @@ def generate_html(packages: list, base_url: str) -> str:
       </div>
 
       <div class="step-item" style="margin-top: 1.5rem;">
-        <div class="step-header">Step 2: Add Repository Source</div>
-        <div class="step-desc">Configure XBPS to fetch binary packages directly from this GitHub Pages site:</div>
+        <div class="step-header">
+          <span class="step-num">2</span>
+          Add Repository Source
+        </div>
+        <div class="step-desc">Configure XBPS to fetch binary packages directly from this repository:</div>
         <div class="code-box">
           <button class="copy-btn" data-target="cmd-step2">Copy</button>
           <pre id="cmd-step2">echo "repository={base_url}/x86_64" | sudo tee /etc/xbps.d/50-cgo-void-repo.conf</pre>
@@ -132,7 +177,10 @@ def generate_html(packages: list, base_url: str) -> str:
       </div>
 
       <div class="step-item" style="margin-top: 1.5rem;">
-        <div class="step-header">Step 3: Synchronize and Install</div>
+        <div class="step-header">
+          <span class="step-num">3</span>
+          Synchronize & Install
+        </div>
         <div class="step-desc">Update your XBPS index and install packages:</div>
         <div class="code-box">
           <button class="copy-btn" data-target="cmd-step3">Copy</button>
@@ -144,27 +192,11 @@ sudo xbps-install &lt;package-name&gt;</pre>
     </div>
   </section>
 
-  <!-- Ecosystem & Compatibility -->
-  <section class="section">
-    <h2 class="section-title">🧩 Ecosystem & Compatibility</h2>
+  <!-- Package Catalog -->
+  <section class="section" id="packages">
+    <h2 class="section-title">📦 Package Catalog ({len(packages)} Available)</h2>
     <div class="card">
-      <p>This repository is built continuously via GitHub Actions and verified against:</p>
-      <ul style="margin: 0.75rem 0 0.75rem 1.5rem; color: var(--text-secondary);">
-        <li><strong style="color: var(--text-primary)">Official Void Repositories:</strong> Fully compatible with official Void glibc and musl packages.</li>
-        <li><strong style="color: var(--text-primary)">XLibre (xlibre-void):</strong> Optimized and compatible with systems running XLibre modular display servers and drivers.</li>
-        <li><strong style="color: var(--text-primary)">Community Repositories:</strong> Coexists safely with <code>gsr4xbps</code> and <code>sonicde-void</code>.</li>
-      </ul>
-      <div class="info-callout">
-        <strong>Automated & Secure:</strong> Built inside isolated Void Linux containers. Repodata is signed using RSA cryptography. All private keys remain safely stored in encrypted GitHub Secrets.
-      </div>
-    </div>
-  </section>
-
-  <!-- Available Packages -->
-  <section class="section">
-    <h2 class="section-title">📦 Package Catalog ({len(packages)} Packages)</h2>
-    <div class="card">
-      <input type="text" id="pkg-search" class="pkg-search" placeholder="Filter packages by name, description, or keyword...">
+      <input type="text" id="pkg-search" class="pkg-search" placeholder="Search packages (e.g. cgo-hello, games, tools)...">
       <div style="overflow-x: auto;">
         <table class="pkg-table">
           <thead>
@@ -183,11 +215,42 @@ sudo xbps-install &lt;package-name&gt;</pre>
     </div>
   </section>
 
+  <!-- Ecosystem & Compatibility -->
+  <section class="section" id="ecosystem">
+    <h2 class="section-title">🧩 Ecosystem & Compatibility</h2>
+    <div class="card">
+      <p style="color: var(--text-secondary);">This repository is maintained by <strong>CasperGamingOne</strong> under the <strong>Games4Everyone</strong> project, engineered to coexist cleanly with your Void Linux setup:</p>
+      
+      <div class="ecosystem-grid">
+        <div class="ecosystem-item">
+          <h3>🐧 Official Void Linux</h3>
+          <p>Fully compliant with upstream Void packages (glibc and musl) and standard xbps packaging conventions.</p>
+        </div>
+        <div class="ecosystem-item">
+          <h3>🖥️ XLibre Display Stack</h3>
+          <p>Engineered and tested alongside <code>xlibre-void</code> display servers and hardware drivers without package conflicts.</p>
+        </div>
+        <div class="ecosystem-item">
+          <h3>🎮 Games4Everyone Ecosystem</h3>
+          <p>Tailored gaming tools, desktop enhancements, and utilities for the modern Linux workstation.</p>
+        </div>
+      </div>
+
+      <div class="info-callout" style="margin-top: 1.25rem;">
+        <strong>Security & Cryptography:</strong> All packages are signed with RSA-2048 keys. Build pipelines run in clean, isolated Void containers via GitHub Actions.
+      </div>
+    </div>
+  </section>
+
 </main>
 
 <footer>
   <div class="container">
-    <p>Maintained by <a href="https://github.com/CasperGamingOne">CasperGamingOne</a> • Automatically built & deployed via <a href="https://github.com/CasperGamingOne/cgo-void-repo/actions">GitHub Actions</a></p>
+    <div class="footer-brand">
+      <img src="assets/games4everyone-logo.png" alt="Games4Everyone" class="footer-logo">
+      <span><strong>Games4Everyone</strong> • CasperGamingOne</span>
+    </div>
+    <p>Powered by <a href="https://voidlinux.org" target="_blank" rel="noopener">Void Linux</a> & <a href="https://pages.github.com" target="_blank" rel="noopener">GitHub Pages</a> • <a href="https://github.com/CasperGamingOne/cgo-void-repo">Source Repository</a></p>
   </div>
 </footer>
 
@@ -200,7 +263,7 @@ sudo xbps-install &lt;package-name&gt;</pre>
 def main():
     repo_root = Path(__file__).resolve().parent.parent
     srcpkgs_dir = repo_root / "srcpkgs"
-    docs_template_dir = repo_root / "docs"
+    docs_dir = repo_root / "docs"
     keys_dir = repo_root / "repo-keys"
 
     out_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else repo_root / "site"
@@ -223,13 +286,22 @@ def main():
 
     # 4. Copy static assets from docs (style.css, app.js, .nojekyll)
     for asset in ["style.css", "app.js", ".nojekyll"]:
-        src = docs_template_dir / asset
+        src = docs_dir / asset
         if src.exists():
             shutil.copy2(src, out_dir / asset)
         elif asset == ".nojekyll":
             (out_dir / ".nojekyll").touch()
 
-    # 5. Copy public verification keys
+    # 5. Copy branding assets directory (assets/)
+    assets_src = docs_dir / "assets"
+    assets_dst = out_dir / "assets"
+    if assets_src.exists():
+        if assets_dst.exists():
+            shutil.rmtree(assets_dst)
+        shutil.copytree(assets_src, assets_dst)
+        print(f"==> Copied branding assets to {assets_dst}")
+
+    # 6. Copy public verification keys
     for key_file in keys_dir.glob("*.pem"):
         shutil.copy2(key_file, out_dir / key_file.name)
     for key_file in keys_dir.glob("*.pub"):

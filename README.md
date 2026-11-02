@@ -1,6 +1,16 @@
+<p align="center">
+  <img src="docs/assets/banner.jpeg" alt="cgo-void-repo Banner" width="100%">
+</p>
+
+<p align="center">
+  <img src="docs/assets/personal-logo.jpeg" alt="CasperGamingOne" width="80" style="border-radius: 16px;">
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="docs/assets/games4everyone-logo.png" alt="Games4Everyone" width="80" style="border-radius: 16px;">
+</p>
+
 # cgo-void-repo 🐧
 
-Personal XBPS binary package repository for **Void Linux**, maintained by **CasperGamingOne**.
+Personal XBPS binary package repository for **Void Linux**, maintained by **CasperGamingOne** under the **Games4Everyone** project.
 
 🌐 **Website & Documentation:** [https://caspergamingone.github.io/cgo-void-repo](https://caspergamingone.github.io/cgo-void-repo)
 
