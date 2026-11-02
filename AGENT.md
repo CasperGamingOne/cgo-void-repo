@@ -126,6 +126,16 @@ These hard-won lessons prevent errors that cause builds and CI workflows to brea
 - **Why It Fails**: GitHub Pages defaults to Jekyll processing, which silently drops files with leading dots or non-standard binary extensions (`.xbps`, repodata), resulting in client 404 errors.
 - **The Fix**: Ensure `docs/.nojekyll` is committed and always deployed into the site root.
 
+### Rule 7: Distfiles with URL Encoding (`%20`) Require Filename Aliases
+- **The Mistake**: Specifying URLs with `%20` directly in `distfiles` without renaming.
+- **Why It Fails**: `xbps-src` internals pass filenames through `printf`, which treats `%20` or `%I` as an invalid format character, throwing `printf: 'I': invalid format character`.
+- **The Fix**: Use the `xbps-src` distfile rename alias syntax: `URL>target_filename.tar.gz`.
+
+### Rule 8: Directory Names with Spaces in `do_install()`
+- **The Mistake**: Writing `cp -a ${_srcdir}/*` when upstream extracts into a directory containing spaces (e.g. `./Antigravity IDE/`).
+- **Why It Fails**: The shell splits the unquoted path into multiple arguments (`./Antigravity` and `IDE/*`), failing with `cannot stat: No such file or directory`.
+- **The Fix**: Always double-quote variables in file operations: `cp -a "${_srcdir}"/* ...`.
+
 ---
 
 ## 6. Smart Workflow & Change Detection Architecture
