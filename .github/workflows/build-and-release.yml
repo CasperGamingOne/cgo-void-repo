@@ -13,6 +13,11 @@ on:
       - 'repo-keys/**'
       - '.github/workflows/**'
   workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: 'Force rebuild of all packages (true/false)'
+        required: false
+        default: 'false'
 
 permissions:
   contents: write
@@ -36,10 +41,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: cgo-void-repo
-          fetch-depth: 0
 
-      - name: Install dependencies & detect modified files
-        id: changes
+      - name: Install dependencies & tools
         run: |
           xbps-install -Syu || xbps-install -u xbps && xbps-install -Syu
           xbps-install -y git shadow python3 ca-certificates openssl xtools
@@ -47,47 +50,65 @@ jobs:
           # Setup builder user in xbuilder group for xbps-uchroot permissions
           useradd -m -G xbuilder -s /bin/bash builder || usermod -aG xbuilder builder
 
-          cd "$GITHUB_WORKSPACE/cgo-void-repo"
-          git config --global --add safe.directory "*"
+      - name: Check repository package state & recover existing packages
+        id: pkg_check
+        run: |
+          ARCH=$(xbps-uhelper arch 2>/dev/null || uname -m)
+          SITE_DIR="$GITHUB_WORKSPACE/cgo-void-repo/site"
+          DIST_DIR="${SITE_DIR}/${ARCH}"
+          mkdir -p "$DIST_DIR"
 
-          BEFORE="${{ github.event.before }}"
-          EVENT_NAME="${{ github.event_name }}"
-          REF="${{ github.ref }}"
-
-          if [ "$EVENT_NAME" = "workflow_dispatch" ] || [[ "$REF" == refs/tags/* ]] || [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
-            echo "==> Full build triggered (dispatch, tag, or new branch/commit)."
-            echo "build_pkgs=true" >> "$GITHUB_OUTPUT"
-            echo "force_all=true" >> "$GITHUB_OUTPUT"
-            echo "changed_files=ALL" >> "$GITHUB_OUTPUT"
-          else
-            CHANGED=$(git diff --name-only "$BEFORE" HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
-            echo "==> Files modified in this push:"
-            echo "$CHANGED"
-
-            if echo "$CHANGED" | grep -q '^srcpkgs/'; then
-              echo "==> Package modifications detected in srcpkgs/."
-              echo "build_pkgs=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "==> No template modifications in srcpkgs/. Skipping package build steps."
-              echo "build_pkgs=false" >> "$GITHUB_OUTPUT"
+          # 1. Recover existing binary packages from gh-pages branch
+          echo "==> Fetching current binary packages from gh-pages..."
+          if git clone --depth 1 --branch gh-pages "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" existing_gh_pages 2>/dev/null; then
+            if [ -d "existing_gh_pages/${ARCH}" ]; then
+              cp -uv existing_gh_pages/${ARCH}/*.xbps "$DIST_DIR/" 2>/dev/null || true
+              echo "==> Recovered existing binary packages:"
+              ls -la "$DIST_DIR"
             fi
-            echo "force_all=false" >> "$GITHUB_OUTPUT"
+            rm -rf existing_gh_pages
+          fi
 
-            EOF_MARKER=$(openssl rand -hex 8)
-            echo "changed_files<<$EOF_MARKER" >> "$GITHUB_OUTPUT"
-            echo "$CHANGED" >> "$GITHUB_OUTPUT"
-            echo "$EOF_MARKER" >> "$GITHUB_OUTPUT"
+          # 2. Check which packages in srcpkgs need building
+          FORCE="${{ github.event.inputs.force_rebuild || 'false' }}"
+          PKGS_TO_BUILD=""
+
+          for pkg_dir in "$GITHUB_WORKSPACE/cgo-void-repo/srcpkgs/"*; do
+            if [ -d "$pkg_dir" ] && [ -f "$pkg_dir/template" ]; then
+              pkgname=$(basename "$pkg_dir")
+              ver=$(grep "^version=" "$pkg_dir/template" | cut -d'=' -f2 | tr -d '"' | tr -d "'")
+              rev=$(grep "^revision=" "$pkg_dir/template" | cut -d'=' -f2 | tr -d '"' | tr -d "'")
+              expected_bin="${pkgname}-${ver}_${rev}.${ARCH}.xbps"
+
+              if [ "$FORCE" != "true" ] && [ -f "$DIST_DIR/$expected_bin" ]; then
+                echo "==> Package '$pkgname' version $ver_$rev is already built ($expected_bin). Skipping."
+              else
+                echo "==> Package '$pkgname' ($expected_bin) is NOT present in repo. Mark for build!"
+                PKGS_TO_BUILD="${PKGS_TO_BUILD} ${pkgname}"
+              fi
+            fi
+          done
+
+          PKGS_TO_BUILD=$(echo "$PKGS_TO_BUILD" | xargs)
+          echo "Packages scheduled for build: '${PKGS_TO_BUILD}'"
+
+          if [ -n "$PKGS_TO_BUILD" ]; then
+            echo "needs_build=true" >> "$GITHUB_OUTPUT"
+            echo "pkgs=${PKGS_TO_BUILD}" >> "$GITHUB_OUTPUT"
+          else
+            echo "needs_build=false" >> "$GITHUB_OUTPUT"
+            echo "pkgs=" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Checkout void-packages
-        if: steps.changes.outputs.build_pkgs == 'true'
+        if: steps.pkg_check.outputs.needs_build == 'true'
         uses: actions/checkout@v4
         with:
           repository: void-linux/void-packages
           path: void-packages
 
       - name: Prepare xbps-src build engine
-        if: steps.changes.outputs.build_pkgs == 'true'
+        if: steps.pkg_check.outputs.needs_build == 'true'
         run: |
           chown -R builder:builder "$GITHUB_WORKSPACE"
           runuser -u builder -g xbuilder -- bash << 'EOF'
@@ -101,69 +122,54 @@ jobs:
             ./xbps-src binary-bootstrap
           EOF
 
-      - name: Build modified package templates
-        if: steps.changes.outputs.build_pkgs == 'true'
+      - name: Build scheduled packages
+        if: steps.pkg_check.outputs.needs_build == 'true'
         env:
-          CHANGED_FILES: ${{ steps.changes.outputs.changed_files }}
-          FORCE_ALL: ${{ steps.changes.outputs.force_all }}
+          BUILD_PKGS: ${{ steps.pkg_check.outputs.pkgs }}
         run: |
           chown -R builder:builder "$GITHUB_WORKSPACE"
-          runuser -u builder -g xbuilder -- env CHANGED_FILES="$CHANGED_FILES" FORCE_ALL="$FORCE_ALL" bash << 'EOF'
+          runuser -u builder -g xbuilder -- env BUILD_PKGS="$BUILD_PKGS" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" bash << 'EOF'
             set -euo pipefail
             export GIT_DISCOVERY_ACROSS_FILESYSTEM=1
-            cd "$GITHUB_WORKSPACE"
-            for pkg in cgo-void-repo/srcpkgs/*; do
-              if [ -d "$pkg" ] && [ -f "$pkg/template" ]; then
-                pkgname=$(basename "$pkg")
-                if [ "$FORCE_ALL" = "true" ] || echo "$CHANGED_FILES" | grep -q "^srcpkgs/$pkgname/"; then
-                  echo "==> Building $pkgname (changes detected in srcpkgs/$pkgname)..."
-                  rm -rf "void-packages/srcpkgs/$pkgname"
-                  cp -a "$pkg" "void-packages/srcpkgs/$pkgname"
-                  cd void-packages
-                  ./xbps-src pkg "$pkgname"
-                  cd "$GITHUB_WORKSPACE"
-                else
-                  echo "==> Skipping $pkgname: no changes detected in srcpkgs/$pkgname"
-                fi
-              fi
+            ARCH=$(xbps-uhelper arch 2>/dev/null || uname -m)
+            DIST_DIR="$GITHUB_WORKSPACE/cgo-void-repo/site/${ARCH}"
+
+            for pkgname in $BUILD_PKGS; do
+              echo "==> Building $pkgname with xbps-src..."
+              rm -rf "void-packages/srcpkgs/$pkgname"
+              cp -a "$GITHUB_WORKSPACE/cgo-void-repo/srcpkgs/$pkgname" "void-packages/srcpkgs/$pkgname"
+              cd void-packages
+              ./xbps-src pkg "$pkgname"
+              cd "$GITHUB_WORKSPACE"
             done
+
+            # Copy newly built packages into the distribution directory
+            if [ -d "void-packages/hostdir/binpkgs" ]; then
+              find void-packages/hostdir/binpkgs -type f -name "*.xbps" -exec cp -uv {} "$DIST_DIR/" \; || true
+            fi
           EOF
 
       - name: Generate static website & index packages
         env:
           RSA_KEY: ${{ secrets.RSA_PRIVATE_KEY }}
-          REPO_SLUG: ${{ github.repository }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           chown -R builder:builder "$GITHUB_WORKSPACE"
-          runuser -u builder -g xbuilder -- env RSA_KEY="$RSA_KEY" REPO_SLUG="$REPO_SLUG" GH_TOKEN="$GH_TOKEN" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" bash << 'EOF'
+          runuser -u builder -g xbuilder -- env RSA_KEY="$RSA_KEY" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" bash << 'EOF'
             set -euo pipefail
             export GIT_DISCOVERY_ACROSS_FILESYSTEM=1
-            cd "$GITHUB_WORKSPACE"
-            ARCH=$(xbps-uhelper arch)
-            SITE_DIR="cgo-void-repo/site"
+            ARCH=$(xbps-uhelper arch 2>/dev/null || uname -m)
+            SITE_DIR="$GITHUB_WORKSPACE/cgo-void-repo/site"
             DIST_DIR="${SITE_DIR}/${ARCH}"
             mkdir -p "$DIST_DIR"
 
-            # 1. Recover existing binary packages from gh-pages so unchanged packages are preserved
-            if git clone --depth 1 --branch gh-pages "https://x-access-token:${GH_TOKEN}@github.com/${REPO_SLUG}.git" existing_gh_pages 2>/dev/null; then
-              echo "==> Recovering existing binary packages from gh-pages..."
-              if [ -d "existing_gh_pages/${ARCH}" ]; then
-                cp -uv existing_gh_pages/${ARCH}/*.xbps "$DIST_DIR/" 2>/dev/null || true
-              fi
-              rm -rf existing_gh_pages
-            fi
+            # 1. Run dynamic site generator
+            python3 "$GITHUB_WORKSPACE/cgo-void-repo/scripts/generate-web.py" "$SITE_DIR"
 
-            # 2. Run dynamic site generator
-            python3 cgo-void-repo/scripts/generate-web.py "$SITE_DIR"
-
-            # 3. Copy newly built packages from this run into the architecture directory
-            if [ -d "void-packages/hostdir/binpkgs" ]; then
-              find void-packages/hostdir/binpkgs -type f -name "*.xbps" -exec cp -uv {} "$DIST_DIR/" \; || true
-            fi
-
-            # 4. Sign repodata
+            # 2. Sign repodata
             cd "$DIST_DIR"
+            echo "==> Packages in repository index:"
+            ls -la ./*.xbps || true
+
             if [ -n "${RSA_KEY:-}" ]; then
               echo "==> Signing repodata using GitHub Secret RSA_PRIVATE_KEY..."
               echo "$RSA_KEY" > signing.key
