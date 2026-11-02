@@ -1,0 +1,48 @@
+# Template file for 'antigravity'
+pkgname=antigravity
+version=2.28.2
+revision=1
+_buildver=5937220255875072
+archs="x86_64"
+create_wrksrc=yes
+depends="gtk+3 nss alsa-lib dbus glib libX11 libXcomposite libXdamage libXext libXfixes libXrandr libxkbcommon mesa xdg-utils"
+short_desc="Google Antigravity 2.0 multi-agent orchestration desktop platform"
+maintainer="CasperGamingOne <caspergamingone@proton.me>"
+license="custom:Google-Antigravity"
+homepage="https://antigravity.google"
+distfiles="https://storage.googleapis.com/antigravity-public/antigravity-hub/${version}-${_buildver}/linux-x64/Antigravity.tar.gz"
+checksum=bd92938b088863baff568b08236f76f0d237e8a39581077a07937f4dc6e138c3
+restricted=yes
+nostrip=yes
+
+do_install() {
+	vmkdir opt/${pkgname}
+	vmkdir usr/bin
+	vmkdir usr/share/applications
+	vmkdir usr/share/pixmaps
+
+	local _srcdir
+	_srcdir=$(find . -maxdepth 1 -mindepth 1 -type d -name "Antigravity*" | head -n 1)
+	if [ -z "${_srcdir}" ]; then
+		_srcdir="."
+	fi
+
+	cp -a ${_srcdir}/* ${DESTDIR}/opt/${pkgname}/
+	chmod 755 ${DESTDIR}/opt/${pkgname}/antigravity 2>/dev/null || true
+
+	ln -sf /opt/${pkgname}/antigravity ${DESTDIR}/usr/bin/${pkgname}
+
+	vinstall ${FILESDIR}/${pkgname}.desktop 644 usr/share/applications
+
+	if [ -f "${DESTDIR}/opt/${pkgname}/resources/icon.png" ]; then
+		vinstall "${DESTDIR}/opt/${pkgname}/resources/icon.png" 644 usr/share/pixmaps "${pkgname}.png"
+	elif [ -f "${DESTDIR}/opt/${pkgname}/antigravity.png" ]; then
+		vinstall "${DESTDIR}/opt/${pkgname}/antigravity.png" 644 usr/share/pixmaps "${pkgname}.png"
+	fi
+
+	if [ -f "${DESTDIR}/opt/${pkgname}/LICENSE.electron.txt" ]; then
+		vlicense "${DESTDIR}/opt/${pkgname}/LICENSE.electron.txt"
+	elif [ -f "${DESTDIR}/opt/${pkgname}/LICENSE" ]; then
+		vlicense "${DESTDIR}/opt/${pkgname}/LICENSE"
+	fi
+}

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Google Antigravity
+Comment=Google Antigravity 2.0 multi-agent orchestration desktop platform
+Exec=/usr/bin/antigravity %U
+Icon=antigravity
+Terminal=false
+Type=Application
+StartupWMClass=Antigravity
+Categories=Development;Utility;
+MimeType=x-scheme-handler/antigravity;

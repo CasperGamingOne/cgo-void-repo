@@ -159,7 +159,37 @@ When CI triggers:
 
 ---
 
-## 7. End-to-End Operational Lifecycle
+## 7. Automated Upstream Updates & Package Isolation
+
+To keep packaged software (like **Google Antigravity** and **Antigravity IDE**) continuously up to date without manual intervention:
+
+### A. Modular Update Engine (`scripts/check-updates.py`)
+- Can check a single package or all packages:
+  ```bash
+  python3 scripts/check-updates.py antigravity
+  python3 scripts/check-updates.py antigravity-ide
+  python3 scripts/check-updates.py --all
+  ```
+- Scrapes the official upstream release portal (`https://antigravity.google/download?os=linux`).
+- Compares local `version` and `_buildver` against upstream releases.
+- Automatically downloads and streams the SHA-256 checksum when an update is found.
+- Safely rewrites `version`, `_buildver`, `checksum`, and resets `revision=1` in `srcpkgs/<pkgname>/template`.
+
+### B. Scheduled Automation Workflow (`check-upstream-updates.yml`)
+- Runs on a daily cron schedule (`0 4 * * *`) and on manual `workflow_dispatch`.
+- Evaluates each target application in isolation.
+- If an update is detected, it commits and pushes **only that package's template** in an independent git commit:
+  `feat(pkg): update <pkgname> to <version>`.
+- The push triggers `build-and-release.yml`, which compiles **only that updated package** in isolation, signs the repo, updates the dynamic web catalog, and deploys. Unchanged packages are preserved from `gh-pages`.
+
+### C. Electron & Proprietary Binary Packaging Directives
+- **`restricted=yes`**: Mandatory for proprietary binaries with custom EULAs.
+- **`nostrip=yes`**: Mandatory for Electron and Node native binaries; stripping corrupts runtime code.
+- **Modular X11 Libraries**: Use `libX11`, `libXext`, `libXrandr`, `libxkbcommon` instead of `xorg-server` to maintain total compatibility with the **XLibre** environment.
+
+---
+
+## 8. End-to-End Operational Lifecycle
 
 ### Step 1: Local Environment Bootstrap
 ```bash
@@ -219,7 +249,7 @@ git push origin v1.0.0
 
 ---
 
-## 8. Troubleshooting Matrix
+## 9. Troubleshooting Matrix
 
 | Symptom / Error | Root Cause | Verified Agent Solution |
 | :--- | :--- | :--- |

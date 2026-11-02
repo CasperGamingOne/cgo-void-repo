@@ -1,0 +1,16 @@
+[Desktop Entry]
+Name=Antigravity IDE
+Comment=Google's agent-first AI integrated development environment
+Exec=/usr/bin/antigravity-ide %F
+Icon=antigravity-ide
+Terminal=false
+Type=Application
+StartupWMClass=Antigravity IDE
+Categories=Development;IDE;TextEditor;
+MimeType=text/plain;inode/directory;x-scheme-handler/antigravity-ide;
+Actions=new-empty-window;
+
+[Desktop Action new-empty-window]
+Name=New Empty Window
+Exec=/usr/bin/antigravity-ide --new-window %F
+Icon=antigravity-ide

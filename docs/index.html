@@ -105,7 +105,7 @@
           <span class="step-num">3</span>
           Synchronize & Install
         </div>
-        <div class="step-desc">Update your XBPS index and install any package from the catalog:</div>
+        <div class="step-desc">Update your XBPS index and install packages:</div>
         <div class="code-box">
           <button class="copy-btn" data-target="cmd-step3">Copy</button>
           <pre id="cmd-step3">sudo xbps-install -S
@@ -118,7 +118,7 @@ sudo xbps-install &lt;package-name&gt;</pre>
 
   <!-- Package Catalog -->
   <section class="section" id="packages">
-    <h2 class="section-title">📦 Package Catalog</h2>
+    <h2 class="section-title">📦 Package Catalog (3 Available)</h2>
     <div class="card">
       <input type="text" id="pkg-search" class="pkg-search" placeholder="Search packages (e.g. cgo-hello, games, tools)...">
       <div style="overflow-x: auto;">
@@ -132,12 +132,27 @@ sudo xbps-install &lt;package-name&gt;</pre>
             </tr>
           </thead>
           <tbody id="pkg-table-body">
-            <tr class="pkg-row">
-              <td class="pkg-name"><code>cgo-hello</code></td>
-              <td><code>1.0.0_1</code></td>
-              <td>x86_64</td>
-              <td class="pkg-desc">Demonstration and verification package for cgo-void-repo</td>
-            </tr>
+
+        <tr class="pkg-row">
+          <td class="pkg-name"><code>antigravity</code> <a href="https://antigravity.google" target="_blank" rel="noopener">🌐</a></td>
+          <td><code>2.28.2_1</code></td>
+          <td>x86_64</td>
+          <td class="pkg-desc">Google Antigravity 2.0 multi-agent orchestration desktop platform</td>
+        </tr>
+
+        <tr class="pkg-row">
+          <td class="pkg-name"><code>antigravity-ide</code> <a href="https://antigravity.google" target="_blank" rel="noopener">🌐</a></td>
+          <td><code>2.6.0_1</code></td>
+          <td>x86_64</td>
+          <td class="pkg-desc">Google Antigravity agent-first AI integrated development environment</td>
+        </tr>
+
+        <tr class="pkg-row">
+          <td class="pkg-name"><code>cgo-hello</code> <a href="https://github.com/caspergamingone/cgo-void-repo" target="_blank" rel="noopener">🌐</a></td>
+          <td><code>1.0.0_1</code></td>
+          <td>x86_64</td>
+          <td class="pkg-desc">Demonstration package for cgo-void-repo</td>
+        </tr>
           </tbody>
         </table>
       </div>

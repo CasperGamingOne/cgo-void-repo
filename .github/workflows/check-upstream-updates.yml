@@ -1,0 +1,78 @@
+name: Check Upstream Updates
+
+on:
+  schedule:
+    # Run daily at 04:00 UTC
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+    inputs:
+      target_pkg:
+        description: 'Specific package to check (or "all")'
+        required: false
+        default: 'all'
+
+permissions:
+  contents: write
+
+jobs:
+  check-and-update:
+    name: Check & Update Packages in Isolation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Configure Git Author
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Check and Update Packages
+        run: |
+          set -euo pipefail
+
+          TARGET="${{ github.event.inputs.target_pkg || 'all' }}"
+          if [ "$TARGET" = "all" ] || [ -z "$TARGET" ]; then
+            PACKAGES=("antigravity" "antigravity-ide")
+          else
+            PACKAGES=("$TARGET")
+          fi
+
+          for pkg in "${PACKAGES[@]}"; do
+            echo "=============================================="
+            echo "Checking upstream updates for: $pkg"
+            echo "=============================================="
+
+            # Make sure we are on latest main before each check
+            git pull --rebase origin main || true
+
+            # Run updater
+            python3 scripts/check-updates.py "$pkg"
+
+            # Check if template was modified
+            if ! git diff --quiet "srcpkgs/$pkg/template"; then
+              NEW_VER=$(grep "^version=" "srcpkgs/$pkg/template" | cut -d'=' -f2 | tr -d '"')
+              echo "==> Detected update for $pkg to version $NEW_VER"
+
+              # Stage only this package's template
+              git add "srcpkgs/$pkg/template"
+              git commit -m "feat(pkg): update $pkg to $NEW_VER"
+              
+              echo "==> Pushing isolated update for $pkg to main..."
+              git push origin main
+              
+              # Small delay to ensure separate commit events
+              sleep 5
+            else
+              echo "==> No changes for $pkg."
+            fi
+          done

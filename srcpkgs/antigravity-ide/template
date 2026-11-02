@@ -1,0 +1,56 @@
+# Template file for 'antigravity-ide'
+pkgname=antigravity-ide
+version=2.6.0
+revision=1
+_buildver=5526304964083712
+archs="x86_64"
+create_wrksrc=yes
+depends="gtk+3 nss alsa-lib dbus glib libX11 libXcomposite libXdamage libXext libXfixes libXrandr libxkbcommon mesa xdg-utils"
+short_desc="Google Antigravity agent-first AI integrated development environment"
+maintainer="CasperGamingOne <caspergamingone@proton.me>"
+license="custom:Google-Antigravity"
+homepage="https://antigravity.google"
+distfiles="https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/${version}-${_buildver}/linux-x64/Antigravity%20IDE.tar.gz"
+checksum=b060a7c7679103b2b619752f8ee7a3088dd241a7d207d4311974b56ea6f94356
+restricted=yes
+nostrip=yes
+
+do_install() {
+	vmkdir opt/${pkgname}
+	vmkdir usr/bin
+	vmkdir usr/share/applications
+	vmkdir usr/share/pixmaps
+
+	local _srcdir
+	_srcdir=$(find . -maxdepth 1 -mindepth 1 -type d -name "Antigravity*" | head -n 1)
+	if [ -z "${_srcdir}" ]; then
+		_srcdir="."
+	fi
+
+	cp -a ${_srcdir}/* ${DESTDIR}/opt/${pkgname}/
+
+	if [ -f "${DESTDIR}/opt/${pkgname}/antigravity" ]; then
+		chmod 755 "${DESTDIR}/opt/${pkgname}/antigravity"
+		ln -sf /opt/${pkgname}/antigravity "${DESTDIR}/usr/bin/${pkgname}"
+	elif [ -f "${DESTDIR}/opt/${pkgname}/bin/antigravity-ide" ]; then
+		chmod 755 "${DESTDIR}/opt/${pkgname}/bin/antigravity-ide"
+		ln -sf /opt/${pkgname}/bin/antigravity-ide "${DESTDIR}/usr/bin/${pkgname}"
+	elif [ -f "${DESTDIR}/opt/${pkgname}/antigravity-ide" ]; then
+		chmod 755 "${DESTDIR}/opt/${pkgname}/antigravity-ide"
+		ln -sf /opt/${pkgname}/antigravity-ide "${DESTDIR}/usr/bin/${pkgname}"
+	fi
+
+	vinstall ${FILESDIR}/${pkgname}.desktop 644 usr/share/applications
+
+	if [ -f "${DESTDIR}/opt/${pkgname}/resources/app/resources/linux/code.png" ]; then
+		vinstall "${DESTDIR}/opt/${pkgname}/resources/app/resources/linux/code.png" 644 usr/share/pixmaps "${pkgname}.png"
+	elif [ -f "${DESTDIR}/opt/${pkgname}/resources/icon.png" ]; then
+		vinstall "${DESTDIR}/opt/${pkgname}/resources/icon.png" 644 usr/share/pixmaps "${pkgname}.png"
+	fi
+
+	if [ -f "${DESTDIR}/opt/${pkgname}/LICENSE.electron.txt" ]; then
+		vlicense "${DESTDIR}/opt/${pkgname}/LICENSE.electron.txt"
+	elif [ -f "${DESTDIR}/opt/${pkgname}/LICENSE" ]; then
+		vlicense "${DESTDIR}/opt/${pkgname}/LICENSE"
+	fi
+}
