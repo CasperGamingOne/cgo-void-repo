@@ -54,31 +54,33 @@ jobs:
         id: pkg_check
         run: |
           ARCH=$(xbps-uhelper arch 2>/dev/null || uname -m)
-          DIST_DIR="$GITHUB_WORKSPACE/cgo-void-repo/dist"
+          DIST_DIR="$GITHUB_WORKSPACE/cgo-void-repo/dist/x86_64"
+          DIST_V3_DIR="$GITHUB_WORKSPACE/cgo-void-repo/dist/x86_64-v3"
           SITE_DIR="$GITHUB_WORKSPACE/cgo-void-repo/site"
-          mkdir -p "$DIST_DIR" "$SITE_DIR"
+          mkdir -p "$DIST_DIR" "$DIST_V3_DIR" "$SITE_DIR"
 
-          # 1. Recover existing binary packages from GitHub Releases
+          # 1. Recover existing binary packages from GitHub Releases (both channels)
           echo "==> Fetching existing packages from GitHub Releases..."
           python3 -c "
           import urllib.request, json, os
 
           repo = '${{ github.repository }}'
-          dist_dir = '$DIST_DIR'
-          url = f'https://api.github.com/repos/{repo}/releases/tags/rolling'
+          headers = {'User-Agent': 'CI', 'Authorization': 'Bearer ${{ secrets.GITHUB_TOKEN }}'}
 
-          try:
-              req = urllib.request.Request(url, headers={'User-Agent': 'CI', 'Authorization': 'Bearer ${{ secrets.GITHUB_TOKEN }}'})
-              with urllib.request.urlopen(req, timeout=15) as resp:
-                  data = json.load(resp)
-                  for asset in data.get('assets', []):
-                      name = asset['name']
-                      if name.endswith('.xbps') or name.endswith('.sig2') or name.endswith('-repodata'):
-                          dl_url = asset['browser_download_url']
-                          print(f'==> Downloading existing release asset: {name}')
-                          urllib.request.urlretrieve(dl_url, os.path.join(dist_dir, name))
-          except Exception as e:
-              print(f'Notice: Could not fetch prior release assets ({e}). Building fresh.')
+          for tag, dest in [('rolling', '$DIST_DIR'), ('rolling-v3', '$DIST_V3_DIR')]:
+              url = f'https://api.github.com/repos/{repo}/releases/tags/{tag}'
+              try:
+                  req = urllib.request.Request(url, headers=headers)
+                  with urllib.request.urlopen(req, timeout=15) as resp:
+                      data = json.load(resp)
+                      for asset in data.get('assets', []):
+                          name = asset['name']
+                          if name.endswith('.xbps') or name.endswith('.sig2') or name.endswith('-repodata'):
+                              dl_url = asset['browser_download_url']
+                              print(f'==> Downloading [{tag}] asset: {name}')
+                              urllib.request.urlretrieve(dl_url, os.path.join(dest, name))
+              except Exception as e:
+                  print(f'Notice: Could not fetch prior [{tag}] release assets ({e}). Building fresh.')
           " || true
 
           # 2. Check which packages in srcpkgs need building
@@ -109,7 +111,6 @@ jobs:
             echo "pkgs=${PKGS_TO_BUILD}" >> "$GITHUB_OUTPUT"
           else
             echo "needs_build=false" >> "$GITHUB_OUTPUT"
-            echo "pkgs=" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Checkout void-packages
@@ -129,35 +130,53 @@ jobs:
             cd "$GITHUB_WORKSPACE/void-packages"
             echo "XBPS_CHROOT_CMD=uchroot" >> etc/conf
             echo "XBPS_ALLOW_RESTRICTED=yes" >> etc/conf
-            echo "XBPS_USE_BUILD_MTIME=yes" >> etc/conf
-            echo "XBPS_MAKEJOBS=$(nproc)" >> etc/conf
+
+            # Setup x86_64-v3 optimization profile
+            cat > etc/conf.x86_64-v3 << 'CONF'
+XBPS_ALLOW_RESTRICTED=yes
+XBPS_CFLAGS="-O3 -march=x86-64-v3 -pipe"
+XBPS_CXXFLAGS="-O3 -march=x86-64-v3 -pipe"
+XBPS_TARGET_CFLAGS="-march=x86-64-v3 -mtune=generic"
+XBPS_TARGET_CXXFLAGS="${XBPS_TARGET_CFLAGS}"
+CONF
             ./xbps-src binary-bootstrap
           EOF
 
-      - name: Build scheduled packages
+      - name: Build packages (generic and v3)
         if: steps.pkg_check.outputs.needs_build == 'true'
-        env:
-          BUILD_PKGS: ${{ steps.pkg_check.outputs.pkgs }}
         run: |
           chown -R builder:builder "$GITHUB_WORKSPACE"
-          runuser -u builder -g xbuilder -- env BUILD_PKGS="$BUILD_PKGS" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" bash << 'EOF'
+          runuser -u builder -g xbuilder -- bash << 'EOF'
             set -euo pipefail
             export GIT_DISCOVERY_ACROSS_FILESYSTEM=1
-            DIST_DIR="$GITHUB_WORKSPACE/cgo-void-repo/dist"
+            cd "$GITHUB_WORKSPACE"
 
-            for pkgname in $BUILD_PKGS; do
-              echo "==> Building $pkgname with xbps-src..."
+            PKGS="${{ steps.pkg_check.outputs.pkgs }}"
+            DIST_DIR="$GITHUB_WORKSPACE/cgo-void-repo/dist/x86_64"
+            DIST_V3_DIR="$GITHUB_WORKSPACE/cgo-void-repo/dist/x86_64-v3"
+            mkdir -p "$DIST_DIR" "$DIST_V3_DIR"
+
+            for pkgname in $PKGS; do
+              echo "==> Building package '$pkgname'..."
               rm -rf "void-packages/srcpkgs/$pkgname"
               cp -a "$GITHUB_WORKSPACE/cgo-void-repo/srcpkgs/$pkgname" "void-packages/srcpkgs/$pkgname"
+              
               cd void-packages
+              # 1. Build generic
               ./xbps-src pkg "$pkgname"
+              find hostdir/binpkgs -type f -name "${pkgname}-*.xbps" -exec cp -uv {} "$DIST_DIR/" \; || true
+
+              # 2. Build or mirror v3
+              if [[ "$pkgname" == "noctalia"* || "$pkgname" == "umbriel"* || "$pkgname" == "xdg-desktop-portal-umbriel"* ]]; then
+                ./xbps-src -c x86_64-v3 -f pkg "$pkgname"
+                find hostdir/binpkgs -type f -name "${pkgname}-*.xbps" -exec cp -uv {} "$DIST_V3_DIR/" \; || true
+              else
+                # Universal binary package: mirror
+                find "$DIST_DIR" -type f -name "${pkgname}-*.xbps" -exec cp -uv {} "$DIST_V3_DIR/" \; || true
+              fi
+
               cd "$GITHUB_WORKSPACE"
             done
-
-            # Copy newly built packages into distribution directory
-            if [ -d "void-packages/hostdir/binpkgs" ]; then
-              find void-packages/hostdir/binpkgs -type f -name "*.xbps" -exec cp -uv {} "$DIST_DIR/" \; || true
-            fi
           EOF
 
       - name: Generate static website & index packages
@@ -168,32 +187,32 @@ jobs:
           runuser -u builder -g xbuilder -- env RSA_KEY="$RSA_KEY" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" bash << 'EOF'
             set -euo pipefail
             export GIT_DISCOVERY_ACROSS_FILESYSTEM=1
-            ARCH=$(xbps-uhelper arch 2>/dev/null || uname -m)
             SITE_DIR="$GITHUB_WORKSPACE/cgo-void-repo/site"
-            DIST_DIR="$GITHUB_WORKSPACE/cgo-void-repo/dist"
+            DIST_DIR="$GITHUB_WORKSPACE/cgo-void-repo/dist/x86_64"
+            DIST_V3_DIR="$GITHUB_WORKSPACE/cgo-void-repo/dist/x86_64-v3"
 
-            # 1. Run dynamic site generator (creates web UI in SITE_DIR, < 2MB, no giant binaries)
+            # 1. Run dynamic site generator
             python3 "$GITHUB_WORKSPACE/cgo-void-repo/scripts/generate-web.py" "$SITE_DIR"
 
-            # 2. Sign repodata in DIST_DIR
-            cd "$DIST_DIR"
-            echo "==> Packages in distribution directory:"
-            ls -la ./*.xbps || true
+            # 2. Index and sign both distribution directories
+            for dir in "$DIST_DIR" "$DIST_V3_DIR"; do
+              if [ -d "$dir" ] && ls "$dir"/*.xbps >/dev/null 2>&1; then
+                cd "$dir"
+                echo "==> Indexing packages in $dir..."
+                xbps-rindex -a ./*.xbps || true
 
-            if [ -n "${RSA_KEY:-}" ]; then
-              echo "==> Signing packages (.sig2) and repodata using GitHub Secret RSA_PRIVATE_KEY..."
-              echo "$RSA_KEY" > signing.key
-              chmod 600 signing.key
-              xbps-rindex -a ./*.xbps || true
-              rm -f ./*.sig2
-              xbps-rindex --sign-pkg --privkey signing.key ./*.xbps || true
-              xbps-rindex --sign --signedby "CasperGamingOne Void Repository" --privkey signing.key . || true
-              xbps-rindex -c . || true
-              rm -f signing.key
-            else
-              echo "==> Notice: RSA_PRIVATE_KEY secret not found, indexing without signature..."
-              xbps-rindex -a ./*.xbps || true
-            fi
+                if [ -n "${RSA_KEY:-}" ]; then
+                  echo "==> Signing packages and repodata in $dir..."
+                  echo "$RSA_KEY" > signing.key
+                  chmod 600 signing.key
+                  rm -f ./*.sig2
+                  xbps-rindex --sign-pkg --privkey signing.key ./*.xbps || true
+                  xbps-rindex --sign --signedby "CasperGamingOne Void Repository" --privkey signing.key . || true
+                  xbps-rindex -c . || true
+                  rm -f signing.key
+                fi
+              fi
+            done
           EOF
 
       - name: Fix workspace permissions for artifact upload
@@ -206,11 +225,17 @@ jobs:
         with:
           path: cgo-void-repo/site
 
-      - name: Upload Built Packages Artifact
+      - name: Upload Built Generic Packages Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: xbps-packages
-          path: cgo-void-repo/dist/*
+          name: xbps-packages-generic
+          path: cgo-void-repo/dist/x86_64/*
+
+      - name: Upload Built v3 Packages Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xbps-packages-v3
+          path: cgo-void-repo/dist/x86_64-v3/*
 
   deploy-pages:
     name: Deploy Website to GitHub Pages
@@ -224,34 +249,68 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-  release:
-    name: Publish Binary Packages to GitHub Releases
+  release-generic:
+    name: Publish Generic Packages to rolling
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Download built packages
+      - name: Download generic packages
         uses: actions/download-artifact@v4
         with:
-          name: xbps-packages
-          path: dist
+          name: xbps-packages-generic
+          path: dist/x86_64
 
-      - name: Publish / Update GitHub Release
+      - name: Publish / Update rolling Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: rolling
-          name: "Rolling Package Release"
+          name: "Rolling Package Release (Generic x86_64)"
           body: |
-            Automated binary package builds for `cgo-void-repo` (Void Linux).
+            Automated baseline binary package builds for `cgo-void-repo` (Void Linux).
+            Universal compatibility for all 64-bit x86 systems.
             
             ### Setup
             ```bash
             sudo wget -O /var/db/xbps/keys/cgo-void-repo.pem https://caspergamingone.github.io/cgo-void-repo/cgo-void-repo.pem
-            echo "repository=https://github.com/CasperGamingOne/cgo-void-repo/releases/latest/download" | sudo tee /etc/xbps.d/50-cgo-void-repo.conf
+            echo "repository=https://github.com/CasperGamingOne/cgo-void-repo/releases/download/rolling" | sudo tee /etc/xbps.d/10-cgo-void-repo.conf
             sudo xbps-install -S
             ```
           draft: false
           prerelease: false
           make_latest: "true"
-          files: dist/*
+          files: dist/x86_64/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release-v3:
+    name: Publish Optimized Packages to rolling-v3
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download v3 packages
+        uses: actions/download-artifact@v4
+        with:
+          name: xbps-packages-v3
+          path: dist/x86_64-v3
+
+      - name: Publish / Update rolling-v3 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: rolling-v3
+          name: "Rolling Package Release (x86_64-v3 Optimized)"
+          body: |
+            Optimized microarchitecture package builds for `cgo-void-repo` (Void Linux).
+            Compiled with `-march=x86-64-v3 -O3 -pipe` (AVX, AVX2, FMA, BMI1/2).
+            
+            ### Setup
+            ```bash
+            sudo wget -O /var/db/xbps/keys/cgo-void-repo.pem https://caspergamingone.github.io/cgo-void-repo/cgo-void-repo.pem
+            echo "repository=https://github.com/CasperGamingOne/cgo-void-repo/releases/download/rolling-v3" | sudo tee /etc/xbps.d/10-cgo-void-repo.conf
+            sudo xbps-install -S
+            ```
+          draft: false
+          prerelease: false
+          make_latest: "false"
+          files: dist/x86_64-v3/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

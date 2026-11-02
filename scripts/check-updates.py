@@ -180,6 +180,17 @@ def update_package(pkgname: str, check_only: bool = False):
 
         template_path.write_text(content, encoding="utf-8")
         print(f"[{pkgname}] Successfully updated {template_path} to {up_ver}!")
+
+        # Also sync corresponding -v3 variant template if present
+        v3_path = SRCPKGS_DIR / f"{pkgname}-v3" / "template"
+        if v3_path.is_file():
+            v3_content = v3_path.read_text(encoding="utf-8")
+            v3_content = re.sub(r"^version=.*$", f"version={up_ver}", v3_content, flags=re.MULTILINE)
+            v3_content = re.sub(r"^revision=.*$", "revision=1", v3_content, flags=re.MULTILINE)
+            v3_content = re.sub(r"^checksum=.*$", f"checksum={new_hash}", v3_content, flags=re.MULTILINE)
+            v3_path.write_text(v3_content, encoding="utf-8")
+            print(f"[{pkgname}] Also synchronized v3 variant template {v3_path} to {up_ver}!")
+
         return True, up_ver
 
     if pkgname == "megasync":

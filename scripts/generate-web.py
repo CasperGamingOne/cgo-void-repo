@@ -3,8 +3,8 @@
 generate-web.py - Generate GitHub Pages website & package index for cgo-void-repo.
 
 This script parses srcpkgs/*/template to extract package metadata, builds an
-interactive HTML portal and JSON index, bundles the public verification keys,
-copies branding assets, and organizes architecture-specific package directories.
+interactive HTML portal and JSON index with architecture switcher, bundles the
+public verification keys, copies branding assets, and organizes repo data.
 """
 
 import os
@@ -13,6 +13,21 @@ import re
 import json
 import shutil
 from pathlib import Path
+
+SOURCE_BUILT_PACKAGES = {
+    "noctalia",
+    "noctalia-greeter",
+    "umbriel",
+    "xdg-desktop-portal-umbriel",
+}
+
+BINARY_PACKAGES = {
+    "antigravity",
+    "antigravity-ide",
+    "cgo-hello",
+    "megasync",
+    "vmware-workstation",
+}
 
 
 def parse_template(template_path: Path) -> dict:
@@ -24,6 +39,7 @@ def parse_template(template_path: Path) -> dict:
         "homepage": "",
         "license": "Unspecified",
         "maintainer": "",
+        "restricted": "no",
     }
     content = template_path.read_text(encoding="utf-8", errors="replace")
     for line in content.splitlines():
@@ -58,18 +74,36 @@ def generate_html(packages: list, base_url: str) -> str:
         version = f"{pkg['version']}_{pkg['revision']}"
         desc = pkg["short_desc"]
         hp = pkg.get("homepage", "")
-        hp_link = f' <a href="{hp}" target="_blank" rel="noopener">🌐</a>' if hp else ""
+        lic = pkg.get("license", "Unspecified")
+        restricted = pkg.get("restricted", "no") == "yes"
+        hp_link = f' <a href="{hp}" target="_blank" rel="noopener" title="Homepage">🌐</a>' if hp else ""
+
+        is_optimized = pkgname in SOURCE_BUILT_PACKAGES
+        if is_optimized:
+            channel_badges = (
+                '<span class="badge badge-v3" title="Compiled with AVX2/FMA/BMI2 in rolling-v3">⚡ rolling-v3</span> '
+                '<span class="badge badge-generic" title="Compiled for generic baseline in rolling">📦 rolling</span>'
+            )
+        else:
+            channel_badges = '<span class="badge badge-universal" title="Available in both rolling and rolling-v3">🌐 All Channels</span>'
+
+        if restricted or "proprietary" in lic.lower() or "google" in lic.lower() or "mega" in lic.lower():
+            lic_badge = f'<span class="badge badge-restricted" title="Restricted / EULA license">{lic}</span>'
+        else:
+            lic_badge = f'<span class="badge badge-foss" title="Free and Open Source Software">{lic}</span>'
+
         rows.append(f"""
         <tr class="pkg-row">
           <td class="pkg-name"><code>{pkgname}</code>{hp_link}</td>
           <td><code>{version}</code></td>
-          <td>x86_64</td>
+          <td class="pkg-channels">{channel_badges}</td>
+          <td>{lic_badge}</td>
           <td class="pkg-desc">{desc}</td>
         </tr>""")
 
     package_rows_html = "\n".join(rows) if rows else """
         <tr>
-          <td colspan="4" style="text-align: center; color: var(--text-secondary); padding: 2rem;">
+          <td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 2rem;">
             No packages built yet. Templates are available in <code>srcpkgs/</code>.
           </td>
         </tr>"""
@@ -98,8 +132,9 @@ def generate_html(packages: list, base_url: str) -> str:
     <div class="nav-links">
       <a href="#quick-install" class="nav-link">Install</a>
       <a href="#packages" class="nav-link">Packages</a>
+      <a href="#cpu-check" class="nav-link">CPU Check</a>
+      <a href="#compliance" class="nav-link">Licensing</a>
       <a href="#request" class="nav-link">Request</a>
-      <a href="#ecosystem" class="nav-link">Ecosystem</a>
       <a href="https://github.com/CasperGamingOne/cgo-void-repo" target="_blank" rel="noopener" class="nav-link">GitHub ↗</a>
     </div>
   </div>
@@ -126,7 +161,7 @@ def generate_html(packages: list, base_url: str) -> str:
         <span>Void Linux Repository</span>
       </div>
       <h1>cgo-void-repo</h1>
-      <p>Personal XBPS binary package repository for Void Linux by <strong>CasperGamingOne</strong></p>
+      <p>Continuous XBPS binary repository with dual-channel baseline and <strong>x86_64-v3 microarchitecture optimization</strong> by <strong>CasperGamingOne</strong></p>
       <div class="badges">
         <span class="badge badge-g4e">
           <img src="assets/games4everyone-logo.png" style="width: 14px; height: 14px; border-radius: 3px;" alt="G4E">
@@ -134,7 +169,8 @@ def generate_html(packages: list, base_url: str) -> str:
         </span>
         <span class="badge badge-void">🐧 Void Linux</span>
         <span class="badge">📦 XBPS Native</span>
-        <span class="badge">⚙️ x86_64</span>
+        <span class="badge badge-v3">⚡ x86_64-v3 Optimized</span>
+        <span class="badge">⚙️ x86_64 Baseline</span>
         <span class="badge">🧩 XLibre Ready</span>
         <span class="badge">🔐 RSA Signed</span>
       </div>
@@ -154,7 +190,7 @@ def generate_html(packages: list, base_url: str) -> str:
           <span class="step-num">1</span>
           Import Public Verification Key
         </div>
-        <div class="step-desc">Download and trust the official RSA signing key in your system's XBPS database:</div>
+        <div class="step-desc">Download and trust the repository RSA signing key in your system's XBPS keyrings:</div>
         <div class="code-box">
           <button class="copy-btn" data-target="cmd-step1">Copy</button>
           <pre id="cmd-step1">sudo wget -O /var/db/xbps/keys/cgo-void-repo.pem {base_url}/cgo-void-repo.pem</pre>
@@ -164,13 +200,58 @@ def generate_html(packages: list, base_url: str) -> str:
       <div class="step-item" style="margin-top: 1.5rem;">
         <div class="step-header">
           <span class="step-num">2</span>
-          Add Repository Source
+          Choose Your Repository Channel
         </div>
-        <div class="step-desc">Configure XBPS to fetch binary packages directly from the official GitHub Releases distribution:</div>
-        <div class="code-box">
-          <button class="copy-btn" data-target="cmd-step2">Copy</button>
-          <pre id="cmd-step2">echo "repository=https://github.com/CasperGamingOne/cgo-void-repo/releases/latest/download" | sudo tee /etc/xbps.d/50-cgo-void-repo.conf</pre>
+        <div class="step-desc">Select the architecture variant suitable for your processor:</div>
+
+        <!-- Architecture Switcher Tabs -->
+        <div class="arch-switch-container">
+          <button type="button" class="arch-tab-btn active" data-channel="v3">
+            <span>⚡ x86_64-v3 (Modern CPUs)</span>
+            <span class="tab-chip">Recommended</span>
+          </button>
+          <button type="button" class="arch-tab-btn" data-channel="generic">
+            <span>📦 x86_64 (Generic / Compatibility)</span>
+          </button>
+          <button type="button" class="arch-tab-btn" data-channel="dual">
+            <span>🔄 Layered Dual-Repo (Both)</span>
+          </button>
         </div>
+
+        <!-- Channel 1: x86_64-v3 -->
+        <div class="channel-view" id="view-channel-v3">
+          <div class="channel-hint">
+            <strong>🚀 Best Performance:</strong> Compiled with <code>-march=x86-64-v3 -O3 -pipe</code> (AVX2, FMA, BMI1/2). Ideal for Intel Haswell (2013+) and AMD Zen (2017+) or newer. Contains both v3-optimized software and all universal packages.
+          </div>
+          <div class="code-box">
+            <button class="copy-btn" data-target="cmd-step2-v3">Copy</button>
+            <pre id="cmd-step2-v3">echo "repository=https://github.com/CasperGamingOne/cgo-void-repo/releases/download/rolling-v3" | sudo tee /etc/xbps.d/10-cgo-void-repo.conf</pre>
+          </div>
+        </div>
+
+        <!-- Channel 2: generic -->
+        <div class="channel-view" id="view-channel-generic" style="display: none;">
+          <div class="channel-hint">
+            <strong>📦 Maximum Compatibility:</strong> Standard baseline 64-bit compilation. Runs safely on any 64-bit x86 hardware, hypervisors, and legacy PCs without requiring AVX2.
+          </div>
+          <div class="code-box">
+            <button class="copy-btn" data-target="cmd-step2-generic">Copy</button>
+            <pre id="cmd-step2-generic">echo "repository=https://github.com/CasperGamingOne/cgo-void-repo/releases/download/rolling" | sudo tee /etc/xbps.d/10-cgo-void-repo.conf</pre>
+          </div>
+        </div>
+
+        <!-- Channel 3: dual -->
+        <div class="channel-view" id="view-channel-dual" style="display: none;">
+          <div class="channel-hint">
+            <strong>🔄 Dual Layered:</strong> Prioritizes <code>rolling-v3</code> for maximum performance, while keeping <code>rolling</code> as an automatic fallback.
+          </div>
+          <div class="code-box">
+            <button class="copy-btn" data-target="cmd-step2-dual">Copy</button>
+            <pre id="cmd-step2-dual">echo "repository=https://github.com/CasperGamingOne/cgo-void-repo/releases/download/rolling-v3" | sudo tee /etc/xbps.d/10-cgo-repo-v3.conf
+echo "repository=https://github.com/CasperGamingOne/cgo-void-repo/releases/download/rolling" | sudo tee /etc/xbps.d/20-cgo-repo.conf</pre>
+          </div>
+        </div>
+
       </div>
 
       <div class="step-item" style="margin-top: 1.5rem;">
@@ -178,14 +259,38 @@ def generate_html(packages: list, base_url: str) -> str:
           <span class="step-num">3</span>
           Synchronize & Install
         </div>
-        <div class="step-desc">Update your XBPS index and install packages:</div>
+        <div class="step-desc">Synchronize package indexes and install packages with native clean names:</div>
         <div class="code-box">
           <button class="copy-btn" data-target="cmd-step3">Copy</button>
           <pre id="cmd-step3">sudo xbps-install -S
-sudo xbps-install &lt;package-name&gt;</pre>
+sudo xbps-install -S noctalia umbriel vmware-workstation megasync</pre>
         </div>
       </div>
 
+    </div>
+  </section>
+
+  <!-- CPU Architecture Checker Card -->
+  <section class="section" id="cpu-check">
+    <h2 class="section-title">🔍 Check Your CPU Microarchitecture</h2>
+    <div class="card">
+      <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+        Wondering if your CPU supports the <code>x86_64-v3</code> channel? Run this single command in your Void Linux terminal to verify your dynamic linker capabilities:
+      </p>
+      <div class="code-box">
+        <button class="copy-btn" data-target="cmd-cpu-check">Copy</button>
+        <pre id="cmd-cpu-check">/lib/ld-linux-x86-64.so.2 --help | grep -E "x86-64-v[234]"</pre>
+      </div>
+      <div class="cpu-result-guide">
+        <div class="cpu-result-item">
+          <span class="badge badge-v3">x86-64-v3 (supported, searched)</span>
+          <span>Your CPU supports AVX2, FMA, BMI1/2. Use the <strong>rolling-v3</strong> channel!</span>
+        </div>
+        <div class="cpu-result-item">
+          <span class="badge badge-generic">Only x86-64 or x86-64-v2</span>
+          <span>Your CPU is baseline/legacy or running in a VM without AVX2. Use the <strong>rolling</strong> channel!</span>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -193,14 +298,15 @@ sudo xbps-install &lt;package-name&gt;</pre>
   <section class="section" id="packages">
     <h2 class="section-title">📦 Package Catalog ({len(packages)} Available)</h2>
     <div class="card">
-      <input type="text" id="pkg-search" class="pkg-search" placeholder="Search packages (e.g. cgo-hello, games, tools)...">
+      <input type="text" id="pkg-search" class="pkg-search" placeholder="Search packages (e.g. noctalia, umbriel, vmware, antigravity)...">
       <div style="overflow-x: auto;">
         <table class="pkg-table">
           <thead>
             <tr>
               <th>Package</th>
               <th>Version</th>
-              <th>Architecture</th>
+              <th>Channel Availability</th>
+              <th>License</th>
               <th>Description</th>
             </tr>
           </thead>
@@ -212,12 +318,33 @@ sudo xbps-install &lt;package-name&gt;</pre>
     </div>
   </section>
 
+  <!-- Compliance & Packaging Integrity Card -->
+  <section class="section" id="compliance">
+    <h2 class="section-title">⚖️ Packaging Guidelines & Licensing Compliance</h2>
+    <div class="card">
+      <div class="compliance-grid">
+        <div class="compliance-item">
+          <h3>📜 License Integrity</h3>
+          <p>Every package explicitly follows upstream license agreements. Free software (MIT) installs complete license files to <code>/usr/share/licenses/</code> via <code>vlicense</code>. Proprietary software (VMware, Google Antigravity, MegaSync) includes official EULAs and is marked with Void's <code>restricted=yes</code> flag.</p>
+        </div>
+        <div class="compliance-item">
+          <h3>🐧 Void Linux Packaging Standards</h3>
+          <p>All templates are linted with <code>xlint</code> (0 warnings). Packages strictly isolate <code>hostmakedepends</code>, <code>makedepends</code>, and runtime <code>depends</code>. Native Runit service scripts are placed in <code>/etc/sv/</code>, and kernel modules are managed cleanly via official DKMS triggers without modifying root partitions.</p>
+        </div>
+        <div class="compliance-item">
+          <h3>🔐 Cryptographic Verification</h3>
+          <p>Every <code>.xbps</code> package and repository index (<code>x86_64-repodata</code>) is cryptographically signed using our 4096-bit RSA signing key. Your system verifies signatures locally before installing any package.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Package Request Section -->
   <section class="section" id="request">
     <h2 class="section-title">📥 Request a Package</h2>
     <div class="card">
       <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
-        Need software packaged natively for Void Linux? Submit a package request below. Our automated GitHub pipeline registers an Issue Tracking ID, evaluates compatibility, and triggers Discord / email notifications upon status updates.
+        Need software packaged natively for Void Linux? Submit a package request below. Our automated GitHub pipeline registers an Issue Tracking ID, evaluates compatibility, and triggers Discord Direct Message notifications on status updates.
       </p>
 
       <form id="package-request-form">
@@ -245,186 +372,167 @@ sudo xbps-install &lt;package-name&gt;</pre>
 
         <div class="form-grid-2">
           <div class="form-group">
-            <label class="form-label" for="req-buildsystem">Build System / Language</label>
+            <label class="form-label" for="req-buildsystem">Build System</label>
             <select id="req-buildsystem" class="form-control">
-              <option value="CMake (C / C++)">CMake (C / C++)</option>
-              <option value="Meson / Ninja (C / C++)">Meson / Ninja (C / C++)</option>
-              <option value="Cargo (Rust)">Cargo (Rust)</option>
-              <option value="Go (golang)">Go (golang)</option>
-              <option value="Python (PEP 517 / wheel)">Python (PEP 517 / wheel)</option>
-              <option value="Autotools / Make">Autotools / Make</option>
-              <option value="Pre-built Binary Repackage">Pre-built Binary Repackage</option>
-              <option value="Other / Unknown">Other / Unknown</option>
+              <option value="meson">Meson / Ninja</option>
+              <option value="cmake">CMake</option>
+              <option value="cargo">Cargo / Rust</option>
+              <option value="gnu-configure">GNU Autotools (configure)</option>
+              <option value="python3-pep517">Python (PEP517 / pyproject)</option>
+              <option value="go">Go Modules</option>
+              <option value="binary">Pre-compiled Binary / Wrapper</option>
+              <option value="other">Other / Custom</option>
             </select>
           </div>
           <div class="form-group">
             <label class="form-label" for="req-license">License <span class="required">*</span></label>
-            <input type="text" id="req-license" class="form-control" placeholder="e.g. GPL-3.0, MIT, Proprietary" required>
+            <input type="text" id="req-license" class="form-control" placeholder="e.g. GPL-3.0-or-later, MIT, Proprietary" required>
           </div>
         </div>
 
         <div class="form-group">
           <label class="form-label" for="req-description">Description & Purpose <span class="required">*</span></label>
-          <textarea id="req-description" class="form-control" rows="3" placeholder="Briefly describe what this software does and why Void Linux users would benefit from it..." required></textarea>
-        </div>
-
-        <div class="form-grid-2">
-          <div class="form-group">
-            <label class="form-label" for="req-dependencies">Known Dependencies</label>
-            <input type="text" id="req-dependencies" class="form-control" placeholder="e.g. qt6-base, ffmpeg, libva, alsa-lib">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="req-contact">Discord for Status DM Alerts <span class="required">*</span></label>
-            <input type="text" id="req-contact" class="form-control" placeholder="18-digit Discord User ID or @username" required>
-          </div>
+          <textarea id="req-description" class="form-control" rows="3" placeholder="Briefly describe what the program does and why it is useful for Void Linux users..." required></textarea>
         </div>
 
         <div class="form-group">
-          <label class="form-label">Void Linux Considerations</label>
-          <div class="form-checkbox-grid">
-            <label class="form-checkbox-label">
-              <input type="checkbox" class="req-void-spec" value="Requires runit background service (/etc/sv/)">
-              Runit Service (/etc/sv/)
-            </label>
-            <label class="form-checkbox-label">
-              <input type="checkbox" class="req-void-spec" value="Requires DKMS kernel module (/usr/src/)">
-              DKMS Kernel Module
-            </label>
-            <label class="form-checkbox-label">
-              <input type="checkbox" class="req-void-spec" value="Requires desktop integration (.desktop & icons)">
-              Desktop & Icons (.desktop)
-            </label>
-            <label class="form-checkbox-label">
-              <input type="checkbox" class="req-void-spec" value="Glibc only (incompatible with musl)">
-              Glibc only (not musl)
-            </label>
-            <label class="form-checkbox-label">
-              <input type="checkbox" class="req-void-spec" value="Requires proprietary drivers / firmware">
-              Proprietary Drivers / Firmware
-            </label>
-          </div>
+          <label class="form-label" for="req-dependencies">Known Dependencies</label>
+          <input type="text" id="req-dependencies" class="form-control" placeholder="e.g. ffmpeg, sdl2, opus, qt6-base">
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="req-notes">Additional Context / References</label>
-          <textarea id="req-notes" class="form-control" rows="2" placeholder="Links to AUR PKGBUILD, Nix derivation, build flags, or special setup instructions..."></textarea>
+          <label class="form-label" for="req-contact">Discord Handle or ID (for Progress Notifications) <span class="required">*</span></label>
+          <input type="text" id="req-contact" class="form-control" placeholder="e.g. caspergamingone or 28392109482019" required>
+          <small style="color: var(--text-muted); display: block; margin-top: 0.35rem;">
+            Used by our GitHub workflow bot to DM you real-time status updates (Accepted, In Progress, Completed, Denied).
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="req-notes">Additional Notes / Special Instructions</label>
+          <textarea id="req-notes" class="form-control" rows="2" placeholder="e.g. Needs specific runit service, DKMS module, or desktop integration..."></textarea>
         </div>
 
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">
-            🚀 Submit Package Request
+            🚀 Submit Package Request via GitHub Issue
           </button>
-        </div>
-
-        <div class="form-notice-box">
-          <div>💡</div>
-          <div>
-            <strong>How Direct Discord DMs Work:</strong>
-            Submitting registers a GitHub Issue with an assigned <strong>Issue Tracking ID</strong> (e.g. <code>#12</code>). Whenever the status updates (<strong>Accepted</strong>, <strong>In Progress</strong>, <strong>Completed</strong>, or <strong>Denied</strong>), our automation bot directly DMs you on Discord with live progress!
-          </div>
         </div>
       </form>
     </div>
   </section>
 
-  <!-- Ecosystem & Compatibility -->
+  <!-- Ecosystem Cards -->
   <section class="section" id="ecosystem">
-    <h2 class="section-title">🧩 Ecosystem & Compatibility</h2>
-    <div class="card">
-      <p style="color: var(--text-secondary);">This repository is maintained by <strong>CasperGamingOne</strong> under the <strong>Games4Everyone</strong> project, engineered to coexist cleanly with your Void Linux setup:</p>
-      
-      <div class="ecosystem-grid">
-        <div class="ecosystem-item">
-          <h3>🐧 Official Void Linux</h3>
-          <p>Fully compliant with upstream Void packages (glibc and musl) and standard xbps packaging conventions.</p>
-        </div>
-        <div class="ecosystem-item">
-          <h3>🖥️ XLibre Display Stack</h3>
-          <p>Engineered and tested alongside <code>xlibre-void</code> display servers and hardware drivers without package conflicts.</p>
-        </div>
-        <div class="ecosystem-item">
-          <h3>🎮 Games4Everyone Ecosystem</h3>
-          <p>Tailored gaming tools, desktop enhancements, and utilities for the modern Linux workstation.</p>
+    <h2 class="section-title">🌐 Ecosystem & Projects</h2>
+    <div class="grid-2">
+      <div class="card">
+        <h3>🎮 Games4Everyone</h3>
+        <p style="color: var(--text-secondary); margin: 0.5rem 0 1rem 0;">
+          Entertainment, modern gaming platforms, and desktop workstation tooling optimized for independence and performance.
+        </p>
+        <div class="badges">
+          <span class="badge">Void Linux</span>
+          <span class="badge">Gaming</span>
+          <span class="badge">Wayland</span>
         </div>
       </div>
-
-      <div class="info-callout" style="margin-top: 1.25rem;">
-        <strong>Security & Cryptography:</strong> All packages are signed with RSA-2048 keys. Build pipelines run in clean, isolated Void containers via GitHub Actions.
+      <div class="card">
+        <h3>🦾 Google Antigravity</h3>
+        <p style="color: var(--text-secondary); margin: 0.5rem 0 1rem 0;">
+          Agent-first AI orchestration desktop platform and IDE packaged natively for Void Linux with complete library support.
+        </p>
+        <div class="badges">
+          <span class="badge">Antigravity 2.0</span>
+          <span class="badge">Multi-Agent</span>
+        </div>
       </div>
     </div>
   </section>
 
 </main>
 
-<footer>
-  <div class="container">
+<footer class="footer">
+  <div class="container footer-content">
     <div class="footer-brand">
-      <img src="assets/games4everyone-logo.png" alt="Games4Everyone" class="footer-logo">
-      <span><strong>Games4Everyone</strong> • CasperGamingOne</span>
+      <img src="assets/personal-logo.jpeg" alt="CasperGamingOne" class="footer-logo">
+      <div>
+        <div style="font-weight: 700; color: #fff;">CasperGamingOne</div>
+        <div style="color: var(--text-muted); font-size: 0.85rem;">Games4Everyone • Void Linux Repository</div>
+      </div>
     </div>
-    <p>Powered by <a href="https://voidlinux.org" target="_blank" rel="noopener">Void Linux</a> & <a href="https://pages.github.com" target="_blank" rel="noopener">GitHub Pages</a> • <a href="https://github.com/CasperGamingOne/cgo-void-repo">Source Repository</a> • <a href="https://github.com/CasperGamingOne/cgo-void-repo/blob/main/LICENSE">License</a></p>
-    <p style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-muted);">
-      Software and packaging templates licensed under MIT. Personal branding, logos, and banner artworks belong solely to CasperGamingOne (Games4Everyone) and require prior consent for use.
-    </p>
+    <div class="footer-copy">
+      Maintained by <a href="https://github.com/CasperGamingOne" target="_blank" rel="noopener">CasperGamingOne</a>.
+    </div>
   </div>
 </footer>
 
 <script src="app.js"></script>
 </body>
-</html>
-"""
+</html>"""
+
+
+def generate_json_index(packages: list, base_url: str) -> dict:
+    return {
+        "repository": "cgo-void-repo",
+        "owner": "CasperGamingOne",
+        "brand": "Games4Everyone",
+        "channels": {
+            "rolling-v3": {
+                "name": "Rolling Release (x86_64-v3 Optimized)",
+                "url": "https://github.com/CasperGamingOne/cgo-void-repo/releases/download/rolling-v3",
+                "cflags": "-O3 -march=x86-64-v3 -pipe",
+                "target_cpus": "Intel Haswell+, AMD Zen+ (AVX2, FMA, BMI1/2)",
+            },
+            "rolling": {
+                "name": "Rolling Release (x86_64 Generic)",
+                "url": "https://github.com/CasperGamingOne/cgo-void-repo/releases/download/rolling",
+                "cflags": "-O2 -pipe",
+                "target_cpus": "Universal 64-bit x86",
+            },
+        },
+        "signing_key": f"{base_url}/cgo-void-repo.pem",
+        "packages": packages,
+    }
 
 
 def main():
     repo_root = Path(__file__).resolve().parent.parent
     srcpkgs_dir = repo_root / "srcpkgs"
-    docs_dir = repo_root / "docs"
-    keys_dir = repo_root / "repo-keys"
+    repo_keys_dir = repo_root / "repo-keys"
+    assets_dir = repo_root / "assets"
+    
+    # Destination directory for the website
+    site_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else (repo_root / "docs")
+    site_dir.mkdir(parents=True, exist_ok=True)
 
-    out_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else repo_root / "site"
-    out_dir.mkdir(parents=True, exist_ok=True)
+    base_url = "https://caspergamingone.github.io/cgo-void-repo"
 
-    base_url = os.environ.get("PAGES_URL", "https://caspergamingone.github.io/cgo-void-repo")
-    print(f"==> Generating website into: {out_dir}")
-    print(f"==> Base URL: {base_url}")
-
-    # 1. Parse packages
+    print(f"==> Scanning packages in {srcpkgs_dir}...")
     packages = scan_packages(srcpkgs_dir)
-    print(f"==> Discovered {len(packages)} package(s): {[p['pkgname'] for p in packages]}")
+    print(f"Found {len(packages)} packages.")
 
-    # 2. Write packages.json
-    (out_dir / "packages.json").write_text(json.dumps(packages, indent=2), encoding="utf-8")
-
-    # 3. Write index.html
+    print(f"==> Generating website in {site_dir}...")
     html_content = generate_html(packages, base_url)
-    (out_dir / "index.html").write_text(html_content, encoding="utf-8")
+    (site_dir / "index.html").write_text(html_content, encoding="utf-8")
 
-    # 4. Copy static assets from docs (style.css, app.js, .nojekyll)
-    for asset in ["style.css", "app.js", ".nojekyll"]:
-        src = docs_dir / asset
-        dst = out_dir / asset
-        if src.exists():
-            if src.resolve() != dst.resolve():
-                shutil.copy2(src, dst)
-        elif asset == ".nojekyll":
-            dst.touch()
+    json_index = generate_json_index(packages, base_url)
+    (site_dir / "packages.json").write_text(json.dumps(json_index, indent=2), encoding="utf-8")
 
-    # 5. Copy branding assets directory (assets/)
-    assets_src = docs_dir / "assets"
-    assets_dst = out_dir / "assets"
-    if assets_src.exists() and assets_src.resolve() != assets_dst.resolve():
-        if assets_dst.exists():
-            shutil.rmtree(assets_dst)
-        shutil.copytree(assets_src, assets_dst)
-        print(f"==> Copied branding assets to {assets_dst}")
+    # Copy verification key
+    pubkey = repo_keys_dir / "cgo-void-repo.pem"
+    if pubkey.is_file():
+        shutil.copy2(pubkey, site_dir / "cgo-void-repo.pem")
 
-    # 6. Copy public verification keys
-    for key_file in keys_dir.glob("*.pem"):
-        shutil.copy2(key_file, out_dir / key_file.name)
-    for key_file in keys_dir.glob("*.pub"):
-        shutil.copy2(key_file, out_dir / key_file.name)
+    # Copy branding assets
+    if assets_dir.is_dir():
+        dest_assets = site_dir / "assets"
+        dest_assets.mkdir(parents=True, exist_ok=True)
+        for img in assets_dir.glob("*"):
+            if img.is_file():
+                shutil.copy2(img, dest_assets / img.name)
 
-    print("==> Website generation complete!")
+    print("==> Website generated successfully!")
 
 
 if __name__ == "__main__":

@@ -22,6 +22,28 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  // Architecture Channel Switcher
+  const tabBtns = document.querySelectorAll(".arch-tab-btn");
+  const channelViews = {
+    v3: document.getElementById("view-channel-v3"),
+    generic: document.getElementById("view-channel-generic"),
+    dual: document.getElementById("view-channel-dual"),
+  };
+
+  tabBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const channel = btn.getAttribute("data-channel");
+      tabBtns.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      Object.keys(channelViews).forEach((key) => {
+        if (channelViews[key]) {
+          channelViews[key].style.display = key === channel ? "block" : "none";
+        }
+      });
+    });
+  });
+
   // Package search filter
   const searchInput = document.getElementById("pkg-search");
   if (searchInput) {
