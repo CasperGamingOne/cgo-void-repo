@@ -260,8 +260,8 @@ sudo xbps-install &lt;package-name&gt;</pre>
             <input type="text" id="req-dependencies" class="form-control" placeholder="e.g. qt6-base, ffmpeg, libva, alsa-lib">
           </div>
           <div class="form-group">
-            <label class="form-label" for="req-contact">Notification Handle (Discord / Email)</label>
-            <input type="text" id="req-contact" class="form-control" placeholder="e.g. Discord: @user#1234 or email@example.com">
+            <label class="form-label" for="req-contact">Direct Notifications (Discord DM & Email)</label>
+            <input type="text" id="req-contact" class="form-control" placeholder="Discord: 123456789012345678 (or @username) / Email: you@example.com">
           </div>
         </div>
 
@@ -308,8 +308,8 @@ sudo xbps-install &lt;package-name&gt;</pre>
         <div class="form-notice-box">
           <div>💡</div>
           <div>
-            <strong>How Tracking & Notifications Work:</strong>
-            Submitting pre-fills an official GitHub Issue. Upon creation, GitHub assigns an <strong>Issue Tracking ID</strong> (e.g. <code>#12</code>), auto-labels the request, and dispatches a notification to the <strong>Games4Everyone Discord</strong>. You will receive email notifications via GitHub whenever the package is accepted, built, and released!
+            <strong>How Direct Notifications Work:</strong>
+            Submitting registers a GitHub Issue with an assigned <strong>Issue Tracking ID</strong> (e.g. <code>#12</code>). Whenever the status updates (<strong>Accepted</strong>, <strong>In Progress</strong>, <strong>Completed</strong>, or <strong>Denied</strong>), our automation bot directly sends you a <strong>Discord DM</strong> and an <strong>Email</strong> with progress updates!
           </div>
         </div>
       </form>
