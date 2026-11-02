@@ -65,7 +65,7 @@
   {
     "pkgname": "vmware-workstation",
     "version": "26H1u1",
-    "revision": "1",
+    "revision": "2",
     "short_desc": "Industry standard for running multiple operating systems on Linux",
     "homepage": "https://www.vmware.com/products/workstation-pro.html",
     "license": "custom:Proprietary",

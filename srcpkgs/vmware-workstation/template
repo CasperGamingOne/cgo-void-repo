@@ -1,7 +1,7 @@
 # Template file for 'vmware-workstation'
 pkgname=vmware-workstation
 version=26H1u1
-revision=1
+revision=2
 _buildver=25688693
 _installer_ver=3.1.0
 archs="x86_64"
@@ -36,7 +36,9 @@ do_install() {
 	vmkdir usr/lib/vmware/isoimages
 	vmkdir usr/lib/vmware-vix
 	vmkdir usr/lib/vmware-ovftool
-	vmkdir usr/lib/vmware-installer/${_installer_ver}
+	vmkdir usr/lib/vmware-installer/${_installer_ver}/bin
+	vmkdir usr/lib/vmware-installer/${_installer_ver}/lib/lib
+	vmkdir usr/lib/vmware-installer/${_installer_ver}/artwork
 	vmkdir usr/include/vmware-vix
 	vmkdir usr/share
 	vmkdir etc/vmware
@@ -56,7 +58,7 @@ do_install() {
 		"${DESTDIR}/usr/share"
 	[ -d vmware-workstation/man ] && cp -r vmware-workstation/man "${DESTDIR}/usr/share"
 
-	# Executables
+	# Executables and wrapper scripts
 	cp -r vmware-workstation/bin/* vmware-vmx/{,s}bin/* \
 		vmware-vix-core/bin/* vmware-vprobe/bin/* \
 		"${DESTDIR}/usr/bin"
@@ -74,6 +76,8 @@ do_install() {
 	cp -r vmware-ovftool/* "${DESTDIR}/usr/lib/vmware-ovftool"
 	cp -r vmware-installer/{python,sopython,vmis,vmis-launcher,vmware-installer,vmware-installer.py} \
 		"${DESTDIR}/usr/lib/vmware-installer/${_installer_ver}"
+	install -m 755 "${FILESDIR}/configure-initscript.sh" \
+		"${DESTDIR}/usr/lib/vmware-installer/${_installer_ver}/bin/configure-initscript.sh"
 	cp -r vmware-vix-core/include/* "${DESTDIR}/usr/include/vmware-vix"
 
 	# Windows Guest tools ISO
@@ -102,11 +106,16 @@ do_install() {
 	sqlite3 "${db}" "INSERT INTO settings(key,value,component_name) VALUES('db.schemaVersion','2','vmware-installer');"
 	sqlite3 "${db}" "CREATE TABLE components(id INTEGER PRIMARY KEY, name VARCHAR NOT NULL, version VARCHAR NOT NULL, buildNumber INTEGER NOT NULL, component_core_id INTEGER NOT NULL, longName VARCHAR NOT NULL, description VARCHAR, type INTEGER NOT NULL);"
 	sqlite3 "${db}" "INSERT INTO components(name,version,buildNumber,component_core_id,longName,description,type) VALUES('vmware-workstation','${version}',${_buildver},1,'VMware Workstation','VMware Workstation',1);"
+	sqlite3 "${db}" "INSERT INTO components(name,version,buildNumber,component_core_id,longName,description,type) VALUES('vmware-tools-windows','13.1.5',${_buildver},1,'windows','windows',1);"
 
 	# Configurations and kernel loading
 	install -m 644 "${FILESDIR}/config" "${DESTDIR}/etc/vmware/config"
 	install -m 644 "${FILESDIR}/vmware-bootstrap" "${DESTDIR}/etc/vmware/bootstrap"
-	install -m 644 "${FILESDIR}/vmware-bootstrap" "${DESTDIR}/etc/vmware-installer/bootstrap"
+	install -m 644 vmware-installer/bootstrap "${DESTDIR}/etc/vmware-installer/bootstrap"
+	sed -i \
+		-e "s/@@VERSION@@/${_installer_ver}/" \
+		-e "s,@@VMWARE_INSTALLER@@,/usr/lib/vmware-installer/${_installer_ver}," \
+		"${DESTDIR}/etc/vmware-installer/bootstrap"
 	install -m 644 "${FILESDIR}/vmware-vix-bootstrap" "${DESTDIR}/etc/vmware-vix/bootstrap"
 	install -m 644 "${FILESDIR}/vmware-fuse.conf" "${DESTDIR}/usr/lib/modprobe.d/vmware-fuse.conf"
 	printf "vmw_vmci\nvmmon\nvmnet\n" > "${DESTDIR}/usr/lib/modules-load.d/vmware.conf"
@@ -127,16 +136,42 @@ do_install() {
 	chmod 4755 "${DESTDIR}/usr/bin"/vmware-authd
 	chmod 4755 "${DESTDIR}/usr/lib/vmware/bin"/{vmware-vmx,vmware-vmx-debug,vmware-vmx-stats}
 
-	# Symlinks to VMware bin utilities
-	for link in licenseTool vmware vmware-app-control vmware-fuseUI vmware-gksu \
-		vmware-modconfig vmware-netcfg vmware-tray vmware-zenity; do
-		ln -sf "/usr/lib/vmware/bin/${link}" "${DESTDIR}/usr/bin/${link}"
+	# Internal links to appLoader
+	for link in licenseTool vmware vmware-app-control vmware-enter-serial \
+		vmware-fuseUI vmware-gksu vmware-modconfig vmware-modconfig-console \
+		vmware-mount vmware-netcfg vmware-setup-helper vmware-tray \
+		vmware-vmblock-fuse vmware-vprobe vmware-zenity; do
+		ln -sf /usr/lib/vmware/bin/appLoader "${DESTDIR}/usr/lib/vmware/bin/${link}"
 	done
 
-	# Bypass vmware-modconfig GUI check since modules are managed via DKMS
+	# Links exposed directly in /usr/bin and /etc
+	ln -sf /usr/lib/vmware/bin/appLoader "${DESTDIR}/usr/bin/vmrest"
+	for link in vmware-fuseUI vmware-mount vmware-netcfg vmware-usbarbitrator; do
+		ln -sf "/usr/lib/vmware/bin/${link}" "${DESTDIR}/usr/bin/${link}"
+	done
+	ln -sf "/usr/lib/vmware-installer/${_installer_ver}/vmware-installer" "${DESTDIR}/usr/bin/vmware-installer"
+	ln -sf "/usr/lib/vmware-ovftool/ovftool" "${DESTDIR}/usr/bin/ovftool"
+	ln -sf "/usr/lib/vmware/icu" "${DESTDIR}/etc/vmware/icu"
+	ln -sf "/usr/lib/vmware-vix/libvixAllProducts.so" "${DESTDIR}/usr/lib/libvixAllProducts.so"
+
+	# Fix gdk-pixbuf loaders configuration
+	if [ -f "${DESTDIR}/usr/lib/vmware/libconf/etc/gtk-3.0/gdk-pixbuf.loaders" ]; then
+		sed -i 's,@@LIBCONF_DIR@@,/usr/lib/vmware/libconf,g' \
+			"${DESTDIR}/usr/lib/vmware/libconf/etc/gtk-3.0/gdk-pixbuf.loaders"
+	fi
+
+	# Fix desktop entries and window management class
+	sed -i 's,@@BINARY@@,/usr/bin/vmware,' "${DESTDIR}/usr/share/applications/vmware-workstation.desktop"
+	sed -i 's,@@BINARY@@,/usr/bin/vmware-netcfg,' "${DESTDIR}/usr/share/applications/vmware-netcfg.desktop"
+	sed -i '/^StartupNotify=.*/a StartupWMClass=vmware' "${DESTDIR}/usr/share/applications/vmware-workstation.desktop"
+	sed -i '/^StartupNotify=.*/a StartupWMClass=vmware-netcfg' "${DESTDIR}/usr/share/applications/vmware-netcfg.desktop"
+
+	# Bypass vmware-modconfig GUI check in wrapper scripts since modules are managed via DKMS
 	for prog in vmware vmware-tray; do
 		if [ -f "${DESTDIR}/usr/bin/${prog}" ]; then
-			sed -i -e 's/if "$BINDIR"\/vmware-modconfig --appname=.*/if true ||/' "${DESTDIR}/usr/bin/${prog}"
+			sed -i -e 's/elif "$BINDIR"\/vmware-modconfig --appname=.*/elif true ||/' \
+				-e 's/if "$BINDIR"\/vmware-modconfig --appname=.*/if true ||/' \
+				"${DESTDIR}/usr/bin/${prog}"
 		fi
 	done
 }
