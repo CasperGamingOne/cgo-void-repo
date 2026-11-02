@@ -1,0 +1,98 @@
+name: "Package Request Automation"
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  triage-and-notify:
+    name: "Triage & Discord / Notification Dispatch"
+    if: contains(github.event.issue.labels.*.name, 'package-request') || contains(github.event.issue.title, '[Package Request]')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add Triage Labels & Auto-Acknowledge
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = context.payload.issue.number;
+            const author = context.payload.issue.user.login;
+            const title = context.payload.issue.title;
+
+            // 1. Ensure labels are applied
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              labels: ['package-request', 'status: pending-triage']
+            });
+
+            // 2. Post automated acknowledgment comment
+            const commentBody = `### 🎮 Package Request Registered: \`#${issueNumber}\`
+
+Hello @${author}! Thank you for your package request for **cgo-void-repo**.
+
+- **Tracking ID:** Issue **#${issueNumber}**
+- **Repository Catalog:** [caspergamingone.github.io/cgo-void-repo](https://caspergamingone.github.io/cgo-void-repo)
+- **Status:** \`pending-evaluation\`
+
+#### 📋 What happens next:
+1. **Viability Review:** We review licensing, runtime dependencies, and Void Linux compatibility (glibc/musl, runit services, DKMS modules).
+2. **Template Creation:** If accepted, a packaging template will be added under \`srcpkgs/\`.
+3. **Automated Build & Signing:** The package will be compiled in an isolated Void container, signed with our RSA key, and published to the rolling repository.
+4. **Notifications:** You will receive notifications directly on this issue as updates or builds are completed.
+
+*Games4Everyone • CasperGamingOne*`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: commentBody
+            });
+
+      - name: Send Discord Webhook Notification
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
+        run: |
+          if [ -z "${DISCORD_WEBHOOK}" ]; then
+            echo "Notice: DISCORD_WEBHOOK secret is not configured; skipping Discord alert."
+            exit 0
+          fi
+
+          # Prepare Discord Embed JSON payload
+          PAYLOAD=$(jq -n \
+            --arg title "📦 New Package Request: #${ISSUE_NUMBER}" \
+            --arg url "${ISSUE_URL}" \
+            --arg desc "${ISSUE_TITLE}" \
+            --arg author "${ISSUE_AUTHOR}" \
+            --arg num "${ISSUE_NUMBER}" \
+            '{
+              username: "cgo-void-repo Bot",
+              avatar_url: "https://caspergamingone.github.io/cgo-void-repo/assets/games4everyone-logo.png",
+              embeds: [{
+                title: $title,
+                url: $url,
+                description: $desc,
+                color: 3719160,
+                fields: [
+                  { name: "Issue Tracking ID", value: ("#" + $num), inline: true },
+                  { name: "Requested By", value: ("@" + $author), inline: true },
+                  { name: "Status", value: "Pending Triage", inline: true }
+                ],
+                footer: {
+                  text: "cgo-void-repo • Games4Everyone",
+                  icon_url: "https://caspergamingone.github.io/cgo-void-repo/assets/personal-logo.jpeg"
+                },
+                timestamp: (now | todate)
+              }]
+            }')
+
+          curl -s -H "Content-Type: application/json" -X POST -d "${PAYLOAD}" "${DISCORD_WEBHOOK}" || true

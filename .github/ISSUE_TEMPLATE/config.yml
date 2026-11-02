@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "🌐 Interactive Web Request Form"
+    url: "https://caspergamingone.github.io/cgo-void-repo/#request"
+    about: "Submit package requests directly through the cgo-void-repo web portal."
+  - name: "💬 Games4Everyone Discord"
+    url: "https://discord.gg/"
+    about: "Discuss packaging, request assistance, or follow updates in our community Discord."

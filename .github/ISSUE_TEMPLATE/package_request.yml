@@ -1,0 +1,127 @@
+name: "📦 Package Request"
+description: "Request a new software package, desktop application, or driver for cgo-void-repo"
+title: "[Package Request]: "
+labels: ["package-request", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### 🎮 CasperGamingOne Void Linux Repository (Games4Everyone)
+        Thank you for submitting a package request! Please fill out as much information as possible.
+        The more details provided (upstream links, build system, dependencies), the faster we can triage, package, and publish the binary.
+
+  - type: input
+    id: pkgname
+    attributes:
+      label: "Package Name"
+      description: "Proposed package name in lowercase, alphanumeric with dashes (e.g. `fastfetch`, `zen-browser`)."
+      placeholder: "e.g. moonlight-qt"
+    validations:
+      required: true
+
+  - type: input
+    id: homepage
+    attributes:
+      label: "Official Website / Homepage"
+      description: "Official web address or project landing page."
+      placeholder: "https://example.org"
+    validations:
+      required: true
+
+  - type: input
+    id: upstream_repo
+    attributes:
+      label: "Source Code Repository"
+      description: "GitHub, GitLab, Codeberg, or upstream Git repository URL."
+      placeholder: "https://github.com/owner/repository"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: "Latest Stable Version & Download URL"
+      description: "Current release version and direct tarball or binary release archive URL."
+      placeholder: "e.g. 1.4.2 (https://github.com/owner/repo/releases/download/v1.4.2/source.tar.gz)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: build_system
+    attributes:
+      label: "Build System / Language"
+      description: "How is this software compiled and built?"
+      options:
+        - "Meson / Ninja (C / C++)"
+        - "CMake (C / C++)"
+        - "Cargo (Rust)"
+        - "Go (golang)"
+        - "Python (PEP 517 / wheel / setup.py)"
+        - "Autotools / Make (GNU configure)"
+        - "Pre-built Binary Repackage (.tar.gz / .deb / AppImage)"
+        - "Other / Unknown"
+    validations:
+      required: true
+
+  - type: input
+    id: license
+    attributes:
+      label: "Software License"
+      description: "License name or SPDX identifier (e.g. GPL-3.0-or-later, MIT, Apache-2.0, Proprietary)."
+      placeholder: "e.g. MIT"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "Package Description & Purpose"
+      description: "Briefly explain what this software does and why Void Linux users would benefit from having it."
+      placeholder: "A high-performance desktop client for..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: "Known Dependencies"
+      description: "List known runtime libraries and build dependencies if known (e.g. gtk4, ffmpeg, openssl)."
+      placeholder: "runtime: gtk4, libva, alsa-lib\nbuild: meson, pkg-config"
+
+  - type: checkboxes
+    id: void_specs
+    attributes:
+      label: "Void Linux Specifics"
+      description: "Select all that apply for this package:"
+      options:
+        - label: "Requires a runit background service (/etc/sv/)"
+        - label: "Requires a DKMS kernel module (/usr/src/)"
+        - label: "Requires desktop integration (.desktop file, icons, mime info)"
+        - label: "Glibc only (incompatible with Void musl)"
+        - label: "Requires proprietary firmware / hardware drivers"
+
+  - type: input
+    id: contact
+    attributes:
+      label: "Contact for Notifications (Discord or Email)"
+      description: "Enter your Discord username (e.g. `username` or `username#1234`) or Email address if you want to be notified of updates for your assigned Issue ID."
+      placeholder: "e.g. Discord: @casper / Email: user@example.com"
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: "Additional Context / References"
+      description: "Any other details, reference PKGBUILDs (Arch AUR), Nix derivations, or build flags."
+      placeholder: "Reference AUR PKGBUILD: https://aur.archlinux.org/packages/..."
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: "Guidelines Checklist"
+      options:
+        - label: "I have searched existing issues to confirm this package has not already been requested."
+          required: true
+        - label: "The upstream software is actively maintained, open, or from a trusted vendor."
+          required: true
+        - label: "I understand that package inclusion is subject to maintainer evaluation."
+          required: true

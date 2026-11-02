@@ -22,6 +22,7 @@
     <div class="nav-links">
       <a href="#quick-install" class="nav-link">Install</a>
       <a href="#packages" class="nav-link">Packages</a>
+      <a href="#request" class="nav-link">Request</a>
       <a href="#ecosystem" class="nav-link">Ecosystem</a>
       <a href="https://github.com/CasperGamingOne/cgo-void-repo" target="_blank" rel="noopener" class="nav-link">GitHub ↗</a>
     </div>
@@ -194,6 +195,124 @@ sudo xbps-install &lt;package-name&gt;</pre>
           </tbody>
         </table>
       </div>
+    </div>
+  </section>
+
+  <!-- Package Request Section -->
+  <section class="section" id="request">
+    <h2 class="section-title">📥 Request a Package</h2>
+    <div class="card">
+      <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+        Need software packaged natively for Void Linux? Submit a package request below. Our automated GitHub pipeline registers an Issue Tracking ID, evaluates compatibility, and triggers Discord / email notifications upon status updates.
+      </p>
+
+      <form id="package-request-form">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label" for="req-pkgname">Package Name <span class="required">*</span></label>
+            <input type="text" id="req-pkgname" class="form-control" placeholder="e.g. moonlight-qt" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="req-homepage">Official Website / Homepage <span class="required">*</span></label>
+            <input type="url" id="req-homepage" class="form-control" placeholder="https://moonlight-stream.org" required>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label" for="req-upstream">Source Code Repository <span class="required">*</span></label>
+            <input type="url" id="req-upstream" class="form-control" placeholder="https://github.com/moonlight-stream/moonlight-qt" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="req-version">Latest Stable Version & Download URL <span class="required">*</span></label>
+            <input type="text" id="req-version" class="form-control" placeholder="e.g. 6.1.0 (https://...)" required>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label" for="req-buildsystem">Build System / Language</label>
+            <select id="req-buildsystem" class="form-control">
+              <option value="CMake (C / C++)">CMake (C / C++)</option>
+              <option value="Meson / Ninja (C / C++)">Meson / Ninja (C / C++)</option>
+              <option value="Cargo (Rust)">Cargo (Rust)</option>
+              <option value="Go (golang)">Go (golang)</option>
+              <option value="Python (PEP 517 / wheel)">Python (PEP 517 / wheel)</option>
+              <option value="Autotools / Make">Autotools / Make</option>
+              <option value="Pre-built Binary Repackage">Pre-built Binary Repackage</option>
+              <option value="Other / Unknown">Other / Unknown</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="req-license">License <span class="required">*</span></label>
+            <input type="text" id="req-license" class="form-control" placeholder="e.g. GPL-3.0, MIT, Proprietary" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="req-description">Description & Purpose <span class="required">*</span></label>
+          <textarea id="req-description" class="form-control" rows="3" placeholder="Briefly describe what this software does and why Void Linux users would benefit from it..." required></textarea>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label" for="req-dependencies">Known Dependencies</label>
+            <input type="text" id="req-dependencies" class="form-control" placeholder="e.g. qt6-base, ffmpeg, libva, alsa-lib">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="req-contact">Notification Handle (Discord / Email)</label>
+            <input type="text" id="req-contact" class="form-control" placeholder="e.g. Discord: @user#1234 or email@example.com">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Void Linux Considerations</label>
+          <div class="form-checkbox-grid">
+            <label class="form-checkbox-label">
+              <input type="checkbox" class="req-void-spec" value="Requires runit background service (/etc/sv/)">
+              Runit Service (/etc/sv/)
+            </label>
+            <label class="form-checkbox-label">
+              <input type="checkbox" class="req-void-spec" value="Requires DKMS kernel module (/usr/src/)">
+              DKMS Kernel Module
+            </label>
+            <label class="form-checkbox-label">
+              <input type="checkbox" class="req-void-spec" value="Requires desktop integration (.desktop & icons)">
+              Desktop & Icons (.desktop)
+            </label>
+            <label class="form-checkbox-label">
+              <input type="checkbox" class="req-void-spec" value="Glibc only (incompatible with musl)">
+              Glibc only (not musl)
+            </label>
+            <label class="form-checkbox-label">
+              <input type="checkbox" class="req-void-spec" value="Requires proprietary drivers / firmware">
+              Proprietary Drivers / Firmware
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="req-notes">Additional Context / References</label>
+          <textarea id="req-notes" class="form-control" rows="2" placeholder="Links to AUR PKGBUILD, Nix derivation, build flags, or special setup instructions..."></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">
+            🚀 Submit Request on GitHub
+          </button>
+          <button type="button" id="copy-request-md-btn" class="btn btn-secondary">
+            📋 Copy Markdown
+          </button>
+        </div>
+
+        <div class="form-notice-box">
+          <div>💡</div>
+          <div>
+            <strong>How Tracking & Notifications Work:</strong>
+            Submitting pre-fills an official GitHub Issue. Upon creation, GitHub assigns an <strong>Issue Tracking ID</strong> (e.g. <code>#12</code>), auto-labels the request, and dispatches a notification to the <strong>Games4Everyone Discord</strong>. You will receive email notifications via GitHub whenever the package is accepted, built, and released!
+          </div>
+        </div>
+      </form>
     </div>
   </section>
 
