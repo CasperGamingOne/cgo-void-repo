@@ -27,7 +27,7 @@ do_install() {
 		_srcdir="."
 	fi
 
-	cp -a ${_srcdir}/* ${DESTDIR}/opt/${pkgname}/
+	cp -a "${_srcdir}"/* ${DESTDIR}/opt/${pkgname}/
 	chmod 755 ${DESTDIR}/opt/${pkgname}/antigravity 2>/dev/null || true
 
 	ln -sf /opt/${pkgname}/antigravity ${DESTDIR}/usr/bin/${pkgname}

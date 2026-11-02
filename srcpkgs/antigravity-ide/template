@@ -10,7 +10,7 @@ short_desc="Google Antigravity agent-first AI integrated development environment
 maintainer="CasperGamingOne <caspergamingone@proton.me>"
 license="custom:Google-Antigravity"
 homepage="https://antigravity.google"
-distfiles="https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/${version}-${_buildver}/linux-x64/Antigravity%20IDE.tar.gz"
+distfiles="https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/${version}-${_buildver}/linux-x64/Antigravity%20IDE.tar.gz>antigravity-ide-${version}.tar.gz"
 checksum=b060a7c7679103b2b619752f8ee7a3088dd241a7d207d4311974b56ea6f94356
 restricted=yes
 nostrip=yes
@@ -22,12 +22,12 @@ do_install() {
 	vmkdir usr/share/pixmaps
 
 	local _srcdir
-	_srcdir=$(find . -maxdepth 1 -mindepth 1 -type d -name "Antigravity*" | head -n 1)
+	_srcdir=$(find . -maxdepth 1 -mindepth 1 -type d | head -n 1)
 	if [ -z "${_srcdir}" ]; then
 		_srcdir="."
 	fi
 
-	cp -a ${_srcdir}/* ${DESTDIR}/opt/${pkgname}/
+	cp -a "${_srcdir}"/* ${DESTDIR}/opt/${pkgname}/
 
 	if [ -f "${DESTDIR}/opt/${pkgname}/antigravity" ]; then
 		chmod 755 "${DESTDIR}/opt/${pkgname}/antigravity"
