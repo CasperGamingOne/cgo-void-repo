@@ -165,14 +165,10 @@ def generate_html(packages: list, base_url: str) -> str:
           <span class="step-num">2</span>
           Add Repository Source
         </div>
-        <div class="step-desc">Configure XBPS to fetch binary packages directly from this repository:</div>
+        <div class="step-desc">Configure XBPS to fetch binary packages directly from the official GitHub Releases distribution:</div>
         <div class="code-box">
           <button class="copy-btn" data-target="cmd-step2">Copy</button>
-          <pre id="cmd-step2">echo "repository={base_url}/x86_64" | sudo tee /etc/xbps.d/50-cgo-void-repo.conf</pre>
-        </div>
-        <div class="info-callout" style="margin-top: 0.75rem;">
-          <em>Alternative:</em> GitHub Releases source:
-          <code>repository=https://github.com/CasperGamingOne/cgo-void-repo/releases/latest/download</code>
+          <pre id="cmd-step2">echo "repository=https://github.com/CasperGamingOne/cgo-void-repo/releases/latest/download" | sudo tee /etc/xbps.d/50-cgo-void-repo.conf</pre>
         </div>
       </div>
 

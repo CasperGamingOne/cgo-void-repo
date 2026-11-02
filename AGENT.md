@@ -136,6 +136,11 @@ These hard-won lessons prevent errors that cause builds and CI workflows to brea
 - **Why It Fails**: The shell splits the unquoted path into multiple arguments (`./Antigravity` and `IDE/*`), failing with `cannot stat: No such file or directory`.
 - **The Fix**: Always double-quote variables in file operations: `cp -a "${_srcdir}"/* ...`.
 
+### Rule 9: 100 MB Git File Limit (GitHub Releases vs GitHub Pages)
+- **The Mistake**: Pushing `.xbps` binary files directly to the `gh-pages` Git branch.
+- **Why It Fails**: GitHub enforces a strict 100.00 MB file limit on Git commits. Electron packages over 100 MB (e.g. `antigravity` at 157 MB and `antigravity-ide` at 153 MB) cause GitHub's pre-receive hook to decline the push with `GH001: Large files detected`.
+- **The Fix**: Distribute all `.xbps` binary packages and signed repodata via **GitHub Releases** (`/releases/latest/download`), which supports files up to 2 GB each. Dedicate **GitHub Pages** exclusively to the lightweight web interface and public `.pem` key (`< 2 MB` total).
+
 ---
 
 ## 6. Smart Workflow & Change Detection Architecture

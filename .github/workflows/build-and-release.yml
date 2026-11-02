@@ -45,29 +45,41 @@ jobs:
       - name: Install dependencies & tools
         run: |
           xbps-install -Syu || xbps-install -u xbps && xbps-install -Syu
-          xbps-install -y git shadow python3 ca-certificates openssl xtools
+          xbps-install -y git shadow python3 ca-certificates openssl xtools curl
 
           # Setup builder user in xbuilder group for xbps-uchroot permissions
           useradd -m -G xbuilder -s /bin/bash builder || usermod -aG xbuilder builder
 
-      - name: Check repository package state & recover existing packages
+      - name: Check repository package state & recover existing binaries
         id: pkg_check
         run: |
           ARCH=$(xbps-uhelper arch 2>/dev/null || uname -m)
+          DIST_DIR="$GITHUB_WORKSPACE/cgo-void-repo/dist"
           SITE_DIR="$GITHUB_WORKSPACE/cgo-void-repo/site"
-          DIST_DIR="${SITE_DIR}/${ARCH}"
-          mkdir -p "$DIST_DIR"
+          mkdir -p "$DIST_DIR" "$SITE_DIR"
 
-          # 1. Recover existing binary packages from gh-pages branch
-          echo "==> Fetching current binary packages from gh-pages..."
-          if git clone --depth 1 --branch gh-pages "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" existing_gh_pages 2>/dev/null; then
-            if [ -d "existing_gh_pages/${ARCH}" ]; then
-              cp -uv existing_gh_pages/${ARCH}/*.xbps "$DIST_DIR/" 2>/dev/null || true
-              echo "==> Recovered existing binary packages:"
-              ls -la "$DIST_DIR"
-            fi
-            rm -rf existing_gh_pages
-          fi
+          # 1. Recover existing binary packages from GitHub Releases
+          echo "==> Fetching existing packages from GitHub Releases..."
+          python3 -c "
+          import urllib.request, json, os
+
+          repo = '${{ github.repository }}'
+          dist_dir = '$DIST_DIR'
+          url = f'https://api.github.com/repos/{repo}/releases/tags/rolling'
+
+          try:
+              req = urllib.request.Request(url, headers={'User-Agent': 'CI', 'Authorization': 'Bearer ${{ secrets.GITHUB_TOKEN }}'})
+              with urllib.request.urlopen(req, timeout=15) as resp:
+                  data = json.load(resp)
+                  for asset in data.get('assets', []):
+                      name = asset['name']
+                      if name.endswith('.xbps'):
+                          dl_url = asset['browser_download_url']
+                          print(f'==> Downloading existing release asset: {name}')
+                          urllib.request.urlretrieve(dl_url, os.path.join(dist_dir, name))
+          except Exception as e:
+              print(f'Notice: Could not fetch prior release assets ({e}). Building fresh.')
+          " || true
 
           # 2. Check which packages in srcpkgs need building
           FORCE="${{ github.event.inputs.force_rebuild || 'false' }}"
@@ -131,8 +143,7 @@ jobs:
           runuser -u builder -g xbuilder -- env BUILD_PKGS="$BUILD_PKGS" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" bash << 'EOF'
             set -euo pipefail
             export GIT_DISCOVERY_ACROSS_FILESYSTEM=1
-            ARCH=$(xbps-uhelper arch 2>/dev/null || uname -m)
-            DIST_DIR="$GITHUB_WORKSPACE/cgo-void-repo/site/${ARCH}"
+            DIST_DIR="$GITHUB_WORKSPACE/cgo-void-repo/dist"
 
             for pkgname in $BUILD_PKGS; do
               echo "==> Building $pkgname with xbps-src..."
@@ -143,7 +154,7 @@ jobs:
               cd "$GITHUB_WORKSPACE"
             done
 
-            # Copy newly built packages into the distribution directory
+            # Copy newly built packages into distribution directory
             if [ -d "void-packages/hostdir/binpkgs" ]; then
               find void-packages/hostdir/binpkgs -type f -name "*.xbps" -exec cp -uv {} "$DIST_DIR/" \; || true
             fi
@@ -159,15 +170,14 @@ jobs:
             export GIT_DISCOVERY_ACROSS_FILESYSTEM=1
             ARCH=$(xbps-uhelper arch 2>/dev/null || uname -m)
             SITE_DIR="$GITHUB_WORKSPACE/cgo-void-repo/site"
-            DIST_DIR="${SITE_DIR}/${ARCH}"
-            mkdir -p "$DIST_DIR"
+            DIST_DIR="$GITHUB_WORKSPACE/cgo-void-repo/dist"
 
-            # 1. Run dynamic site generator
+            # 1. Run dynamic site generator (creates web UI in SITE_DIR, < 2MB, no giant binaries)
             python3 "$GITHUB_WORKSPACE/cgo-void-repo/scripts/generate-web.py" "$SITE_DIR"
 
-            # 2. Sign repodata
+            # 2. Sign repodata in DIST_DIR
             cd "$DIST_DIR"
-            echo "==> Packages in repository index:"
+            echo "==> Packages in distribution directory:"
             ls -la ./*.xbps || true
 
             if [ -n "${RSA_KEY:-}" ]; then
@@ -187,6 +197,7 @@ jobs:
       - name: Fix workspace permissions for artifact upload
         run: |
           chmod -R 777 "$GITHUB_WORKSPACE/cgo-void-repo/site"
+          chmod -R 777 "$GITHUB_WORKSPACE/cgo-void-repo/dist"
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
@@ -196,52 +207,49 @@ jobs:
       - name: Upload Built Packages Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: xbps-site-and-packages
-          path: cgo-void-repo/site/**/*
+          name: xbps-packages
+          path: cgo-void-repo/dist/*
 
   deploy-pages:
-    name: Deploy to GitHub Pages
+    name: Deploy Website to GitHub Pages
     needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Download built site artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: xbps-site-and-packages
-          path: site
-
-      # 1. Push to gh-pages branch (creates/updates gh-pages branch automatically)
-      - name: Push to gh-pages branch
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./site
-          publish_branch: gh-pages
-          force_orphan: true
-
-      # 2. Deploy directly via GitHub Pages Actions API
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
 
   release:
-    name: Publish GitHub Release
+    name: Publish Binary Packages to GitHub Releases
     needs: build
-    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
       - name: Download built packages
         uses: actions/download-artifact@v4
         with:
-          name: xbps-site-and-packages
+          name: xbps-packages
           path: dist
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+      - name: Publish / Update GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          files: dist/**/*
+          tag_name: rolling
+          name: "Rolling Package Release"
+          body: |
+            Automated binary package builds for `cgo-void-repo` (Void Linux).
+            
+            ### Setup
+            ```bash
+            sudo wget -O /var/db/xbps/keys/cgo-void-repo.pem https://caspergamingone.github.io/cgo-void-repo/cgo-void-repo.pem
+            echo "repository=https://github.com/CasperGamingOne/cgo-void-repo/releases/latest/download" | sudo tee /etc/xbps.d/50-cgo-void-repo.conf
+            sudo xbps-install -S
+            ```
+          draft: false
+          prerelease: false
+          make_latest: "true"
+          files: dist/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

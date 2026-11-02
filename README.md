@@ -76,7 +76,7 @@ This repository is designed to coexist cleanly with:
 sudo wget -O /var/db/xbps/keys/cgo-void-repo.pem https://caspergamingone.github.io/cgo-void-repo/cgo-void-repo.pem
 
 # 2. Add repository source
-echo "repository=https://caspergamingone.github.io/cgo-void-repo/x86_64" | sudo tee /etc/xbps.d/50-cgo-void-repo.conf
+echo "repository=https://github.com/CasperGamingOne/cgo-void-repo/releases/latest/download" | sudo tee /etc/xbps.d/50-cgo-void-repo.conf
 
 # 3. Synchronize repository index
 sudo xbps-install -S
