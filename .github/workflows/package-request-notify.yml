@@ -31,21 +31,23 @@ jobs:
             });
 
             // 2. Post automated acknowledgment comment
-            const commentBody = `### 🎮 Package Request Registered: \`#${issueNumber}\`
-
-Hello @${author}! Thank you for your package request for **cgo-void-repo**.
-
-- **Tracking ID:** Issue **#${issueNumber}**
-- **Repository Catalog:** [caspergamingone.github.io/cgo-void-repo](https://caspergamingone.github.io/cgo-void-repo)
-- **Status:** \`pending-evaluation\`
-
-#### 📋 What happens next:
-1. **Viability Review:** We review licensing, runtime dependencies, and Void Linux compatibility (glibc/musl, runit services, DKMS modules).
-2. **Template Creation:** If accepted, a packaging template will be added under \`srcpkgs/\`.
-3. **Automated Build & Signing:** The package will be compiled in an isolated Void container, signed with our RSA key, and published to the rolling repository.
-4. **Notifications:** You will receive notifications directly on this issue as updates or builds are completed.
-
-*Games4Everyone • CasperGamingOne*`;
+            const commentBody = [
+              `### 🎮 Package Request Registered: \`#${issueNumber}\``,
+              ``,
+              `Hello @${author}! Thank you for your package request for **cgo-void-repo**.`,
+              ``,
+              `- **Tracking ID:** Issue **#${issueNumber}**`,
+              `- **Repository Catalog:** [caspergamingone.github.io/cgo-void-repo](https://caspergamingone.github.io/cgo-void-repo)`,
+              `- **Status:** \`pending-evaluation\``,
+              ``,
+              `#### 📋 What happens next:`,
+              `1. **Viability Review:** We review licensing, runtime dependencies, and Void Linux compatibility (glibc/musl, runit services, DKMS modules).`,
+              `2. **Template Creation:** If accepted, a packaging template will be added under \`srcpkgs/\`.`,
+              `3. **Automated Build & Signing:** The package will be compiled in an isolated Void container, signed with our RSA key, and published to the rolling repository.`,
+              `4. **Notifications:** You will receive notifications directly on this issue as updates or builds are completed.`,
+              ``,
+              `*Games4Everyone • CasperGamingOne*`
+            ].join('\n');
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,

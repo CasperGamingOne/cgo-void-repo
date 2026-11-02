@@ -132,13 +132,11 @@ jobs:
             echo "XBPS_ALLOW_RESTRICTED=yes" >> etc/conf
 
             # Setup x86_64-v3 optimization profile
-            cat > etc/conf.x86_64-v3 << 'CONF'
-XBPS_ALLOW_RESTRICTED=yes
-XBPS_CFLAGS="-O3 -march=x86-64-v3 -pipe"
-XBPS_CXXFLAGS="-O3 -march=x86-64-v3 -pipe"
-XBPS_TARGET_CFLAGS="-march=x86-64-v3 -mtune=generic"
-XBPS_TARGET_CXXFLAGS="${XBPS_TARGET_CFLAGS}"
-CONF
+            echo "XBPS_ALLOW_RESTRICTED=yes" > etc/conf.x86_64-v3
+            echo 'XBPS_CFLAGS="-O3 -march=x86-64-v3 -pipe"' >> etc/conf.x86_64-v3
+            echo 'XBPS_CXXFLAGS="-O3 -march=x86-64-v3 -pipe"' >> etc/conf.x86_64-v3
+            echo 'XBPS_TARGET_CFLAGS="-march=x86-64-v3 -mtune=generic"' >> etc/conf.x86_64-v3
+            echo 'XBPS_TARGET_CXXFLAGS="${XBPS_TARGET_CFLAGS}"' >> etc/conf.x86_64-v3
             ./xbps-src binary-bootstrap
           EOF
 
