@@ -1,0 +1,21 @@
+# Template file for 'xdg-desktop-portal-umbriel'
+pkgname=xdg-desktop-portal-umbriel
+version=0.1.0
+revision=1
+_gitrev="79f087598d596ae8a81dff1036d0ab3b5c446584"
+build_style=meson
+configure_args="-Dtests=false -Dpicker=enabled"
+hostmakedepends="pkg-config meson ninja wayland-devel"
+makedepends="sdbus-c++-devel pipewire-devel wayland-devel wayland-protocols
+ libdrm-devel libgbm-devel cairo-devel tomlplusplus-devel json-c++ gtk4-devel"
+depends="xdg-desktop-portal"
+short_desc="Desktop portal backend for Umbriel"
+maintainer="CasperGamingOne <caspergamingone@proton.me>"
+license="MIT"
+homepage="https://github.com/noctalia-dev/xdg-desktop-portal-umbriel"
+distfiles="https://github.com/noctalia-dev/xdg-desktop-portal-umbriel/archive/${_gitrev}.tar.gz>xdg-desktop-portal-umbriel-${version}.tar.gz"
+checksum=231286cffc2250dc02d9a56d5315999f485ae1dd153c72410be0476c0e20c161
+
+post_install() {
+	vlicense LICENSE
+}

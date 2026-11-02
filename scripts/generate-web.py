@@ -286,15 +286,17 @@ def main():
     # 4. Copy static assets from docs (style.css, app.js, .nojekyll)
     for asset in ["style.css", "app.js", ".nojekyll"]:
         src = docs_dir / asset
+        dst = out_dir / asset
         if src.exists():
-            shutil.copy2(src, out_dir / asset)
+            if src.resolve() != dst.resolve():
+                shutil.copy2(src, dst)
         elif asset == ".nojekyll":
-            (out_dir / ".nojekyll").touch()
+            dst.touch()
 
     # 5. Copy branding assets directory (assets/)
     assets_src = docs_dir / "assets"
     assets_dst = out_dir / "assets"
-    if assets_src.exists():
+    if assets_src.exists() and assets_src.resolve() != assets_dst.resolve():
         if assets_dst.exists():
             shutil.rmtree(assets_dst)
         shutil.copytree(assets_src, assets_dst)

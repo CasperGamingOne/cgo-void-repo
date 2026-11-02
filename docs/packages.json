@@ -25,5 +25,50 @@
     "homepage": "https://github.com/caspergamingone/cgo-void-repo",
     "license": "MIT",
     "maintainer": "CasperGamingOne <caspergamingone@proton.me>"
+  },
+  {
+    "pkgname": "megasync",
+    "version": "6.7.0",
+    "revision": "1",
+    "short_desc": "Easy automated syncing between your computers and your MEGA cloud drive",
+    "homepage": "https://mega.io/desktop",
+    "license": "custom:MEGA LIMITED CODE LICENCE",
+    "maintainer": "CasperGamingOne <caspergamingone@proton.me>"
+  },
+  {
+    "pkgname": "noctalia",
+    "version": "5.4.1",
+    "revision": "1",
+    "short_desc": "Sleek, customizable desktop shell crafted for Wayland",
+    "homepage": "https://github.com/noctalia-dev/noctalia",
+    "license": "MIT",
+    "maintainer": "CasperGamingOne <caspergamingone@proton.me>"
+  },
+  {
+    "pkgname": "noctalia-greeter",
+    "version": "1.7.0",
+    "revision": "1",
+    "short_desc": "Greeter for greetd based on Noctalia desktop shell",
+    "homepage": "https://github.com/noctalia-dev/noctalia-greeter",
+    "license": "MIT",
+    "maintainer": "CasperGamingOne <caspergamingone@proton.me>"
+  },
+  {
+    "pkgname": "umbriel",
+    "version": "0.1.0",
+    "revision": "1",
+    "short_desc": "Wayland compositor with effects built on wlroots",
+    "homepage": "https://github.com/noctalia-dev/umbriel",
+    "license": "MIT",
+    "maintainer": "CasperGamingOne <caspergamingone@proton.me>"
+  },
+  {
+    "pkgname": "xdg-desktop-portal-umbriel",
+    "version": "0.1.0",
+    "revision": "1",
+    "short_desc": "Desktop portal backend for Umbriel",
+    "homepage": "https://github.com/noctalia-dev/xdg-desktop-portal-umbriel",
+    "license": "MIT",
+    "maintainer": "CasperGamingOne <caspergamingone@proton.me>"
   }
 ]

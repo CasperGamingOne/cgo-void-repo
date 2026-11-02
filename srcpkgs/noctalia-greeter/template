@@ -1,0 +1,26 @@
+# Template file for 'noctalia-greeter'
+pkgname=noctalia-greeter
+version=1.7.0
+revision=1
+build_style=meson
+hostmakedepends="pkg-config meson ninja wayland-devel"
+makedepends="wayland-devel wayland-protocols libxkbcommon-devel freetype-devel
+ fontconfig-devel cairo-devel pango-devel librsvg-devel libxml2-devel
+ glib-devel tomlplusplus-devel json-c++ wlroots0.20-devel libinput-devel
+ libepoxy-devel stb libwebp-devel libjxl-devel"
+depends="greetd"
+short_desc="Greeter for greetd based on Noctalia desktop shell"
+maintainer="CasperGamingOne <caspergamingone@proton.me>"
+license="MIT"
+homepage="https://github.com/noctalia-dev/noctalia-greeter"
+distfiles="https://github.com/noctalia-dev/noctalia-greeter/archive/refs/tags/v${version}.tar.gz"
+checksum=5b092784c0147bb6739efc2e8146d2d07e3572a59d7a370e93092f9f56d4fcc8
+
+post_patch() {
+	# Remove host-CPU native tuning flags for generic portability
+	vsed -i "s/'-march=native', '-mtune=native',//g" meson.build
+}
+
+post_install() {
+	vlicense LICENSE
+}

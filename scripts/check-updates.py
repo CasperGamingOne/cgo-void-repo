@@ -14,6 +14,7 @@ Examples:
 import sys
 import os
 import re
+import json
 import urllib.request
 import hashlib
 from pathlib import Path
@@ -22,6 +23,37 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 SRCPKGS_DIR = REPO_ROOT / "srcpkgs"
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"}
+
+
+def fetch_github_release(repo: str):
+    """Fetches the latest release or tag from a GitHub repository."""
+    url = f"https://api.github.com/repos/{repo}/releases/latest"
+    req = urllib.request.Request(url, headers=HEADERS)
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            tag = data.get("tag_name", "")
+            if tag:
+                ver = tag.lstrip("v")
+                tarball_url = f"https://github.com/{repo}/archive/refs/tags/{tag}.tar.gz"
+                return {"version": ver, "tag": tag, "url": tarball_url}
+    except Exception:
+        pass
+
+    # Fallback to tags
+    try:
+        tags_url = f"https://api.github.com/repos/{repo}/tags"
+        req = urllib.request.Request(tags_url, headers=HEADERS)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            if data:
+                tag = data[0].get("name", "")
+                ver = tag.lstrip("v")
+                tarball_url = f"https://github.com/{repo}/archive/refs/tags/{tag}.tar.gz"
+                return {"version": ver, "tag": tag, "url": tarball_url}
+    except Exception:
+        pass
+    return None
 
 
 def fetch_official_download_page():
@@ -119,6 +151,37 @@ def update_package(pkgname: str, check_only: bool = False):
     current_build = current_vars.get("_buildver")
     current_debrev = current_vars.get("_debrev")
 
+    if pkgname in ["noctalia", "noctalia-greeter"]:
+        repo = f"noctalia-dev/{pkgname}"
+        print(f"[{pkgname}] Current local version: {current_ver}")
+        target = fetch_github_release(repo)
+        if not target:
+            print(f"[{pkgname}] Unable to extract release info from GitHub API for {repo}.", file=sys.stderr)
+            return False, None
+        up_ver = target["version"]
+        up_url = target["url"]
+        print(f"[{pkgname}] Latest upstream release: {up_ver}")
+
+        if current_ver == up_ver:
+            print(f"[{pkgname}] Package is already up to date ({current_ver}).")
+            return False, current_ver
+
+        print(f"[{pkgname}] NEW VERSION DETECTED: {current_ver} -> {up_ver}")
+        if check_only:
+            return True, up_ver
+
+        new_hash = compute_sha256(up_url)
+        print(f"[{pkgname}] Computed SHA-256: {new_hash}")
+
+        content = original_content
+        content = re.sub(r"^version=.*$", f"version={up_ver}", content, flags=re.MULTILINE)
+        content = re.sub(r"^revision=.*$", "revision=1", content, flags=re.MULTILINE)
+        content = re.sub(r"^checksum=.*$", f"checksum={new_hash}", content, flags=re.MULTILINE)
+
+        template_path.write_text(content, encoding="utf-8")
+        print(f"[{pkgname}] Successfully updated {template_path} to {up_ver}!")
+        return True, up_ver
+
     if pkgname == "megasync":
         print(f"[{pkgname}] Current local version: {current_ver}-{current_debrev}")
         target = fetch_megasync_metadata()
@@ -193,7 +256,7 @@ def main():
     check_only = "--check-only" in sys.argv
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
 
-    packages = ["antigravity", "antigravity-ide", "megasync"] if not args or args[0] == "--all" else args
+    packages = ["antigravity", "antigravity-ide", "megasync", "noctalia", "noctalia-greeter"] if not args or args[0] == "--all" else args
 
     updated_packages = []
     for pkg in packages:
