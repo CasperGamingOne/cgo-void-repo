@@ -31,6 +31,26 @@ def fetch_official_download_page():
         return resp.read().decode("utf-8", errors="ignore")
 
 
+def fetch_megasync_metadata():
+    """Scrapes latest Debian 12 package from Mega's official Linux repository."""
+    url = "https://mega.nz/linux/repo/Debian_12/amd64/"
+    req = urllib.request.Request(url, headers=HEADERS)
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        html = resp.read().decode("utf-8", errors="ignore")
+    matches = re.findall(r"megasync_([0-9\.]+)-([0-9\.]+)_amd64\.deb", html)
+    if matches:
+        def ver_key(item):
+            return [int(x) if x.isdigit() else 0 for x in item[0].split(".")]
+        latest = sorted(matches, key=ver_key, reverse=True)[0]
+        ver, debrev = latest
+        return {
+            "version": ver,
+            "debrev": debrev,
+            "url": f"https://mega.nz/linux/repo/Debian_12/amd64/megasync_{ver}-{debrev}_amd64.deb"
+        }
+    return None
+
+
 def get_latest_upstream_metadata():
     """Scrapes latest release URLs from the official portal."""
     html = fetch_official_download_page()
@@ -97,6 +117,39 @@ def update_package(pkgname: str, check_only: bool = False):
     current_vars, original_content = read_template_vars(template_path)
     current_ver = current_vars.get("version")
     current_build = current_vars.get("_buildver")
+    current_debrev = current_vars.get("_debrev")
+
+    if pkgname == "megasync":
+        print(f"[{pkgname}] Current local version: {current_ver}-{current_debrev}")
+        target = fetch_megasync_metadata()
+        if not target:
+            print(f"[{pkgname}] Unable to extract upstream metadata from Mega Linux repository.", file=sys.stderr)
+            return False, None
+        up_ver = target["version"]
+        up_debrev = target["debrev"]
+        up_url = target["url"]
+        print(f"[{pkgname}] Latest upstream version: {up_ver}-{up_debrev}")
+
+        if current_ver == up_ver and current_debrev == up_debrev:
+            print(f"[{pkgname}] Package is already up to date ({current_ver}-{current_debrev}).")
+            return False, current_ver
+
+        print(f"[{pkgname}] NEW VERSION DETECTED: {current_ver}-{current_debrev} -> {up_ver}-{up_debrev}")
+        if check_only:
+            return True, up_ver
+
+        new_hash = compute_sha256(up_url)
+        print(f"[{pkgname}] Computed SHA-256: {new_hash}")
+
+        content = original_content
+        content = re.sub(r"^version=.*$", f"version={up_ver}", content, flags=re.MULTILINE)
+        content = re.sub(r"^_debrev=.*$", f"_debrev={up_debrev}", content, flags=re.MULTILINE)
+        content = re.sub(r"^revision=.*$", "revision=1", content, flags=re.MULTILINE)
+        content = re.sub(r"^checksum=.*$", f"checksum={new_hash}", content, flags=re.MULTILINE)
+
+        template_path.write_text(content, encoding="utf-8")
+        print(f"[{pkgname}] Successfully updated {template_path} to {up_ver}-{up_debrev}!")
+        return True, up_ver
 
     print(f"[{pkgname}] Current local version: {current_ver} (build: {current_build})")
 
@@ -140,7 +193,7 @@ def main():
     check_only = "--check-only" in sys.argv
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
 
-    packages = ["antigravity", "antigravity-ide"] if not args or args[0] == "--all" else args
+    packages = ["antigravity", "antigravity-ide", "megasync"] if not args or args[0] == "--all" else args
 
     updated_packages = []
     for pkg in packages:

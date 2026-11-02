@@ -142,13 +142,25 @@ These hard-won lessons prevent errors that cause builds and CI workflows to brea
 - **The Fix**: Distribute all `.xbps` binary packages and signed repodata via **GitHub Releases** (`/releases/latest/download`), which supports files up to 2 GB each. Dedicate **GitHub Pages** exclusively to the lightweight web interface and public `.pem` key (`< 2 MB` total).
 
 ### Rule 10: Remote Signed Repositories Require Individual Package Signatures (`.sig2`)
-- **The Mistake**: Signing only the repodata index (`xbps-rindex --sign`) and omitting package signatures.
-- **Why It Fails**: When an XBPS client queries a remote signed repository, XBPS requires both the signed repodata and a companion signature file (`<pkg>.<arch>.xbps.sig2`) for every package downloaded. If `.sig2` is missing from the repository assets, `xbps-install` aborts with:
+- **The Mistake**: Signing only the repodata index (`xbps-rindex --sign`) and omitting package signatures, or using `xbps-rindex -f --sign-pkg`.
+- **Why It Fails**: When an XBPS client queries a remote signed repository, XBPS requires both the signed repodata and a companion signature file (`<pkg>.<arch>.xbps.sig2`) for every package downloaded. If `.sig2` is missing, `xbps-install` aborts with:
   ```text
   ERROR: [trans] failed to download `<pkg>' signature from `<repo-url>': Not Found
   ERROR: Transaction failed! see above for errors.
   ```
-- **The Fix**: Always sign binary packages with `xbps-rindex -f --sign-pkg --privkey <key> ./*.xbps` to produce `.sig2` files (using `-f` to force re-signing existing signatures), sign the repository index with `xbps-rindex --sign`, and upload matching `.xbps` binaries, `.sig2` signatures, and repodata to the distribution release. Ensure the GitHub Actions secret `RSA_PRIVATE_KEY` is configured in repository secrets. Never mix binaries and signatures from different builds.
+  Furthermore, `xbps-rindex -f --sign-pkg` contains a bug where it opens files with `O_WRONLY|O_TRUNC` omitting `O_CREAT`; if a `.sig2` file does not already exist, it crashes with `failed to create ...: No such file or directory`.
+- **The Fix**: Always remove existing signatures first (`rm -f ./*.sig2`), then sign binary packages with `xbps-rindex --sign-pkg --privkey <key> ./*.xbps` to produce fresh `.sig2` files, sign the repository index with `xbps-rindex --sign`, and upload matching `.xbps` binaries, `.sig2` signatures, and repodata to the distribution release. Ensure the GitHub Actions secret `RSA_PRIVATE_KEY` is configured in repository secrets.
+
+### Rule 11: Packaging Applications with Vendored Libraries (e.g., MEGAsync)
+- **The Context**: Complex desktop applications like MEGAsync bundle private multimedia or helper libraries (e.g. ffmpeg in `/opt/megasync/lib/`) while depending dynamically on system Qt5, X11, and OpenSSL.
+- **Why It Fails**:
+  1. *shlib-provides leak*: `xbps-src` will expose private `/opt/<pkg>/lib/` libraries as global system providers unless `noshlibprovides=yes` is specified.
+  2. *shlib-requires resolution*: In the pre-pkg phase, `04-generate-runtime-deps.sh` scans ELF binaries against Void's `common/shlibs`. If the binary links to vendored libraries (even with embedded `RUNPATH`), the hook can fail or attach invalid system package dependencies.
+  3. *Filesystem placement*: Upstream packages often install configuration into `/etc/udev/rules.d/` and `/etc/sysctl.d/`. Void Linux packaging guidelines require packages to place system rules in `/usr/lib/udev/rules.d/` and `/usr/lib/sysctl.d/`, preserving `/etc/` for local user overrides.
+- **The Fix**:
+  - Set `noshlibprovides=yes` to keep internal vendored libraries private.
+  - Set `noverifyrdeps=yes` and explicitly declare all modular system dependencies in `depends="..."`.
+  - Install udev rules to `/usr/lib/udev/rules.d/` and sysctl limits to `/usr/lib/sysctl.d/`.
 
 ---
 

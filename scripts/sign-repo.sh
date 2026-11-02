@@ -48,7 +48,8 @@ for dir in ${ARCH_DIRS}; do
 
     # 2. Sign individual binary package archives (.sig2)
     echo "--> Signing binary packages with private key..."
-    xbps-rindex -f --sign-pkg --privkey "${PRIVKEY}" ./*.xbps
+    rm -f ./*.sig2
+    xbps-rindex --sign-pkg --privkey "${PRIVKEY}" ./*.xbps
 
     # 3. Sign repository index
     echo "--> Signing repodata with private key..."

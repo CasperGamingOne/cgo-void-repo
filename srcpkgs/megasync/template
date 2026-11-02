@@ -1,0 +1,42 @@
+# Template file for 'megasync'
+pkgname=megasync
+version=6.7.0
+revision=1
+_debrev=1.1
+archs="x86_64"
+create_wrksrc=yes
+depends="qt5-declarative qt5-quickcontrols qt5-quickcontrols2 qt5-graphicaleffects qt5-svg qt5-x11extras libX11 libxcb openssl glib dbus-libs hicolor-icon-theme xdg-utils"
+short_desc="Easy automated syncing between your computers and your MEGA cloud drive"
+maintainer="CasperGamingOne <caspergamingone@proton.me>"
+license="custom:MEGA LIMITED CODE LICENCE"
+homepage="https://mega.io/desktop"
+distfiles="https://mega.nz/linux/repo/Debian_12/amd64/megasync_${version}-${_debrev}_amd64.deb"
+checksum=4062c18a0166405ad2d74162cb596652347398dca93301536d90ef33df075b98
+restricted=yes
+nostrip=yes
+noshlibprovides=yes
+noverifyrdeps=yes
+
+do_install() {
+	vmkdir usr/bin
+	vmkdir opt/megasync/lib
+	vmkdir usr/share/applications
+	vmkdir usr/share/icons
+	vmkdir usr/share/megasync
+	vmkdir usr/lib/udev/rules.d
+	vmkdir usr/lib/sysctl.d
+
+	vbin usr/bin/megasync
+	vbin usr/bin/mega-desktop-app-gfxworker
+
+	cp -a opt/megasync/lib/* ${DESTDIR}/opt/megasync/lib/
+
+	cp -a usr/share/megasync/* ${DESTDIR}/usr/share/megasync/
+	cp -a usr/share/icons/* ${DESTDIR}/usr/share/icons/
+
+	vinstall usr/share/applications/megasync.desktop 644 usr/share/applications
+	vinstall etc/udev/rules.d/99-megasync-udev.rules 644 usr/lib/udev/rules.d
+	vinstall etc/sysctl.d/99-megasync-inotify-limit.conf 644 usr/lib/sysctl.d
+
+	vlicense usr/share/doc/megasync/copyright
+}
