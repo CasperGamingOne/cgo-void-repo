@@ -1,175 +1,233 @@
-# AGENT.md - Autonomous Operational Playbook for `cgo-void-repo`
+# AGENT.md - Master Operational Playbook for `cgo-void-repo`
 
-> **Scope**: This document guides AI agents (and human maintainers) through creating, managing, building, signing, and deploying the custom Void Linux package repository **`cgo-void-repo`** for **CasperGamingOne**, hosted publicly on **GitHub** with a **GitHub Pages** website.
+> **Scope**: This document serves as the authoritative operational manual for AI agents and human maintainers managing the custom Void Linux package repository **`cgo-void-repo`** for **CasperGamingOne** (**Games4Everyone**). It encodes all hard-earned architectural rules, pitfalls, container quirks, and automation practices to guarantee flawless, error-free operations.
 
 ---
 
-## 1. Environment, Workspace & Architecture
+## 1. Workspace Layout & Directory Standards
 
-All Git projects are dedicated to a clean, isolated root directory under the user's home folder.
+All Git development occurs in an isolated, dedicated directory structure in the user's home directory.
 
-| Path | Purpose | Public / Git Tracked |
+| Path | Purpose | Git Tracking Status |
 | :--- | :--- | :--- |
-| `~/git` (`/home/caspergamingone/git`) | **Dedicated Git Workspace** for all git projects | N/A (Workspace root) |
-| `~/git/cgo-void-repo` | **Custom Repository Root** (public GitHub repo) | Yes (Git tracked) |
-| `~/git/cgo-void-repo/docs` | **GitHub Pages Website & Web Distribution** | Yes (`index.html`, `.nojekyll`, styles, public key) |
-| `~/git/cgo-void-repo/repo-keys` | **Public RSA Keys** (`.pem` / `.pub` / `.plist`) | Yes (Public keys only) |
-| `~/git/cgo-void-repo/srcpkgs` | **Source Package Templates** (xbps-src definitions) | Yes (Git tracked) |
-| `~/git/cgo-void-repo/scripts` | **Automation Scripts** (build, sign, setup, deploy) | Yes (Git tracked) |
-| `~/git/cgo-void-repo/binpkgs` | **Local Binary Packages** (local `.xbps` cache) | No (Git ignored) |
+| `~/git` (`/home/caspergamingone/git`) | **Dedicated Git Workspace** for all projects | Root Workspace (Not in Git) |
+| `~/git/cgo-void-repo` | **Custom Repository Root** (public GitHub repository) | Tracked in Git |
+| `~/git/cgo-void-repo/docs` | **GitHub Pages Website & Static XBPS Web Repo** | Tracked (`index.html`, `style.css`, `.nojekyll`, keys) |
+| `~/git/cgo-void-repo/docs/assets` | **Branding Media** (banner, avatar, project logo) | Tracked (Strictly NO loose images in repo root) |
+| `~/git/cgo-void-repo/repo-keys` | **Public RSA Keys** (`.pem` / `.pub` / `.plist`) | Tracked (Public keys ONLY) |
+| `~/git/cgo-void-repo/srcpkgs` | **Source Package Templates** (xbps-src definitions) | Tracked in Git |
+| `~/git/cgo-void-repo/scripts` | **Automation Scripts** (build, sign, web gen, setup) | Tracked in Git |
+| `~/git/cgo-void-repo/binpkgs` | **Local Binary Packages** (local `.xbps` cache) | **Ignored** in `.gitignore` |
 | `~/.local/share/cgo-void-repo` | **Secure Local Private Key Storage** | **NEVER in Git** (`0700` dir, `0600` key) |
-| `~/git/void-packages` | Upstream Void Linux packaging engine (`xbps-src`) | Separate Git repo |
+| `~/git/void-packages` | Upstream Void packaging engine (`xbps-src`) | Separate cloned Git repository |
+| `~/AGENT.md` | Convenience symlink to `~/git/cgo-void-repo/AGENT.md` | Host symlink |
 
 ---
 
-## 2. Cryptography & Secrets Directives (STRICT POLICY)
+## 2. Strict Security & Cryptography Policy (Zero Private Keys in Git)
 
-Because this repository is public on GitHub and hosted via GitHub Pages:
+Because this repository is public on GitHub and deployed to GitHub Pages:
 
 > [!CAUTION]
-> **NO SECRETS OR PRIVATE KEYS IN THE REPOSITORY TREE**
-> 1. **Do NOT create a "SECRETS" directory inside the git tree.**
-> 2. **Local Private Key**: Kept exclusively in `~/.local/share/cgo-void-repo/cgo-void-repo.rsa` with mode `0600`.
-> 3. **CI/CD Private Key**: Provided exclusively as an encrypted GitHub Actions secret (`RSA_PRIVATE_KEY`). The workflow writes it to a temporary runner file, signs repodata, and immediately unlinks it.
-> 4. **Public Keys**: `repo-keys/cgo-void-repo.pem` and `docs/cgo-void-repo.pem` contain only public keys. These are 100% safe to commit and distribute.
+> **ABSOLUTELY NO PRIVATE KEYS OR SECRETS IN THE GIT REPOSITORY**
+> 1. **No Secrets Directory**: Never create a `SECRETS` or `private` folder inside the Git tree.
+> 2. **Local Signing Key**: Stored exclusively outside the repository at `~/.local/share/cgo-void-repo/cgo-void-repo.rsa` with file permissions `0600`.
+> 3. **CI/CD Signing Key**: Injected solely via the encrypted GitHub Actions repository secret `RSA_PRIVATE_KEY`. In workflows, the key is written to a temporary runner file, used to sign repodata, and immediately wiped.
+> 4. **Public Keys**: `repo-keys/cgo-void-repo.pem`, `repo-keys/cgo-void-repo.rsa.pub`, and `docs/cgo-void-repo.pem` contain only public keys and are safe for public distribution.
 
 ---
 
-## 2.1 Personal Brand Identity & Ownership Directives
+## 3. Personal Brand Identity & Creator Ownership Policy
 
 > [!IMPORTANT]
-> **BRANDING AND LOGOS ARE STRICTLY PERSONAL**
-> - The software, templates, and scripts in this repo are open-source under the MIT License.
-> - **Branding is exempt**: The creator names **CasperGamingOne**, **Games4Everyone**, the logos, avatar, banner, and assets under `docs/assets/` belong solely to CasperGamingOne.
-> - When generating templates, documentation, or new web assets, preserve and respect the creator's personal identity. Brand assets and creator names must never be licensed under open-source terms.
+> **BRANDING AND LOGOS ARE STRICTLY PERSONAL TO THE CREATOR**
+> 1. **Dual Licensing Structure**:
+>    - **Open Source Code**: Software, packaging templates, automation scripts, and configuration files are licensed under the **MIT License**.
+>    - **Personal Creative Assets**: The names **"CasperGamingOne"** and **"Games4Everyone"**, the identifier **"cgo-void-repo"**, the avatar (`personal-logo.jpeg`), the banner (`banner.jpeg`), and the logo (`games4everyone-logo.png`) belong solely and personally to **CasperGamingOne**.
+> 2. **Non-Corporate Status**: These assets are personal creative property, not a registered corporate or judicial entity. They must be respected as the creator's personal work.
+> 3. **Exclusion from License**: Brand assets are strictly excluded from the MIT software license and may NOT be used, copied, or modified without prior written consent.
+> 4. **Clean Root Hygiene**: Never leave loose images in the repository root. All branding media must reside neatly inside `docs/assets/`.
 
 ---
 
-## 3. System Ecosystem Awareness: XLibre Integration
+## 4. System Ecosystem Awareness: XLibre Integration
 
-The maintainer's host system runs **XLibre** alongside Void Linux:
+The maintainer's host system runs **XLibre** (`xlibre-void`), an independent fork/implementation of the X display stack for Void Linux:
 
 * **XLibre Repository**: `https://github.com/xlibre-void/xlibre/releases/latest/download`
 * **XLibre Key**: `/var/db/xbps/keys/00:ca:42:57:c9:c0:9a:ec:94:b4:7d:97:e5:a9:aa:1e.plist`
-* **Installed Packages**: `xlibre`, `xlibre-xserver`, XLibre input & video drivers (`xf86-video-*`, `xf86-input-*`).
-* **Coexisting Repos**: `cherrybtw/gsr4xbps`, `sonicde-void`, and Void Linux official repositories.
+* **Host Packages**: `xlibre`, `xlibre-xserver`, XLibre input & video drivers.
+* **Coexisting Repos**: `cherrybtw/gsr4xbps`, `sonicde-void`, and Void Linux official repos.
 
-### Agent Packaging Rules for XLibre Compatibility:
-1. When packaging X11 applications, depend on generic development libraries (e.g. `makedepends="libX11-devel libXext-devel libXrandr-devel"`), not specific xorg server implementations.
-2. If creating display-related tools or window manager components, ensure compatibility with XLibre server interfaces.
-3. Follow the clean public repository pattern modeled by `xlibre-void` (public key in `repo-keys/`, release binaries published online).
-
----
-
-## 4. GitHub Pages Dual Role (Website + Static XBPS Repository)
-
-The `docs/` directory acts as both:
-1. **Interactive Web Front**: A modern landing page (`docs/index.html`, `style.css`, `app.js`) explaining setup steps with 1-click command copying, package search, and compatibility badges.
-2. **Static XBPS Repository**: The `.nojekyll` file ensures GitHub Pages serves raw files (`<arch>-repodata`, `*.xbps`, `cgo-void-repo.pem`) directly over HTTPS.
-
-Clients can configure:
-```text
-repository=https://caspergamingone.github.io/cgo-void-repo/x86_64
-```
-And import the key directly from the site:
-```bash
-sudo wget -O /var/db/xbps/keys/cgo-void-repo.pem https://caspergamingone.github.io/cgo-void-repo/cgo-void-repo.pem
-```
+### Agent Rules for Packaging Software with XLibre:
+1. **Never Depend on `xorg-server` Directly**: If packaging graphical software, depend on modular client libraries (`libX11-devel`, `libXext-devel`, `libXrandr-devel`), never on specific display server implementations.
+2. **Prevent File Clashes**: Avoid packaging conflicting configurations under `/etc/X11/xorg.conf.d/` that disrupt the XLibre server stack.
 
 ---
 
-## 5. End-to-End Operational Lifecycle
+## 5. Critical Technical Lessons & Void Packaging Pitfalls
 
-### Phase 1: Environment Setup
-Verify host dependencies and initialize the `void-packages` builder:
+These hard-won lessons prevent errors that cause builds and CI workflows to break:
+
+### Rule 1: NEVER Symlink Templates into `void-packages/srcpkgs/`
+- **The Mistake**: Running `ln -sf "$pkg" void-packages/srcpkgs/$pkgname`.
+- **Why It Fails**: In Void Linux, symlinks inside `void-packages/srcpkgs/` are reserved for subpackages (`[ -h "$XBPS_SRCPKGDIR/$pkg" ]`). `xbps-src` interprets a symlink as a subpackage and crashes with:
+  ```text
+  => ERROR: <pkg>: missing <pkg>_package() function!
+  ```
+- **The Fix**: **Always copy** the template directory recursively:
+  ```bash
+  rm -rf "void-packages/srcpkgs/$pkgname"
+  cp -a "$pkg" "void-packages/srcpkgs/$pkgname"
+  ```
+
+### Rule 2: Container Image for Void CI
+- **The Mistake**: Pulling `ghcr.io/void-linux/xbps-src-masterdir:latest`.
+- **Why It Fails**: The image does not exist / has been deprecated, resulting in `failed to resolve reference ... not found` (exit code 1).
+- **The Fix**: Always use the official `ghcr.io/void-linux/void-glibc-full:latest`.
+
+### Rule 3: `xbps-src` Strictly Refuses to Run as Root
+- **The Mistake**: Executing `./xbps-src` as root inside a Docker container.
+- **Why It Fails**: `xbps-src` explicitly exits with `ERROR: xbps-src cannot be used as root.`
+- **The Fix**: Provision an unprivileged `builder` user inside the container and run via `runuser`:
+  ```bash
+  useradd -m -G xbuilder -s /bin/bash builder || usermod -aG xbuilder builder
+  runuser -u builder -g xbuilder -- ./xbps-src pkg <pkgname>
+  ```
+
+### Rule 4: User Namespaces Blocked in Docker (`uchroot` Required)
+- **The Mistake**: Relying on default unprivileged user namespaces (`xbps-uunshare`) inside Docker on Ubuntu 24.04 runners.
+- **Why It Fails**: The runner kernel blocks nested unprivileged user namespaces, failing with:
+  ```text
+  ERROR failed to write to /proc/self/uid_map (Operation not permitted)
+  ```
+- **The Fix**:
+  1. Set container `options: --privileged` in the GitHub Actions job.
+  2. Add `builder` user to the `xbuilder` group.
+  3. Configure `echo "XBPS_CHROOT_CMD=uchroot" >> void-packages/etc/conf`.
+  `xbps-uchroot` is SUID root and performs mounts/chroots without user namespaces.
+
+### Rule 5: Git Discovery Across Filesystem Boundaries
+- **The Mistake**: Running git commands inside the container on mounted workspaces.
+- **Why It Fails**: Git detects filesystem boundary crossings and safe directory mismatches:
+  ```text
+  fatal: not a git repository (or any parent up to mount point /)
+  Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+  ```
+- **The Fix**:
+  ```bash
+  export GIT_DISCOVERY_ACROSS_FILESYSTEM=1
+  git config --global --add safe.directory "*"
+  echo "XBPS_USE_BUILD_MTIME=yes" >> void-packages/etc/conf
+  ```
+
+### Rule 6: GitHub Pages `.nojekyll` Requirement
+- **The Mistake**: Deploying binary packages without a `.nojekyll` file.
+- **Why It Fails**: GitHub Pages defaults to Jekyll processing, which silently drops files with leading dots or non-standard binary extensions (`.xbps`, repodata), resulting in client 404 errors.
+- **The Fix**: Ensure `docs/.nojekyll` is committed and always deployed into the site root.
+
+---
+
+## 6. Smart Workflow & Change Detection Architecture
+
+To ensure GitHub Actions runs fast and avoids unnecessary rebuilds:
+
+### A. Workflow-Level Trigger Filtering
+The workflow trigger specifies:
+```yaml
+paths:
+  - 'srcpkgs/**'
+  - 'docs/**'
+  - 'scripts/**'
+  - 'repo-keys/**'
+  - '.github/workflows/**'
+```
+Commits touching **only** documentation or metadata (`README.md`, `AGENT.md`, `LICENSE`, `.gitignore`) **never trigger** the CI pipeline.
+
+### B. Step-Level Change Detection (`changes` step)
+When CI triggers:
+1. `git diff` inspects commits between the previous SHA and `HEAD`.
+2. **If `srcpkgs/` was not modified** (e.g. only CSS or web pages changed):
+   - Skips cloning `void-packages` (~200MB saved).
+   - Skips `binary-bootstrap` (3-5 minutes saved).
+   - Recovers existing built `.xbps` packages from the `gh-pages` branch.
+   - Regenerates website HTML and package catalog in ~20 seconds.
+3. **If `srcpkgs/` was modified**:
+   - Loops through package directories.
+   - **Only compiles packages whose templates were actually modified** (or all if tag/manual dispatch).
+   - Recovers unchanged packages from `gh-pages` branch, so existing packages are never lost.
+
+---
+
+## 7. End-to-End Operational Lifecycle
+
+### Step 1: Local Environment Bootstrap
 ```bash
 # Verify host tools
 sudo xbps-install -S git xtools openssl xbps-rindex
 
-# Bootstrap build engine in ~/git/void-packages
+# Bootstrap void-packages build engine alongside repo
 ./scripts/setup-env.sh
 ```
 
-### Phase 2: Generating Cryptographic Keys
-Run key generator:
+### Step 2: Key Management
 ```bash
+# Generate local private key and export public verification keys
 ./scripts/gen-keys.sh
 ```
-- Creates `~/.local/share/cgo-void-repo/cgo-void-repo.rsa` (secure local private key).
-- Exports `repo-keys/cgo-void-repo.pem` and `docs/cgo-void-repo.pem` (public keys for repo and website).
+- Local private key: `~/.local/share/cgo-void-repo/cgo-void-repo.rsa` (`0600`).
+- Public keys: `repo-keys/cgo-void-repo.pem` and `docs/cgo-void-repo.pem`.
 
-### Phase 3: Authoring & Linting Templates
-Place package definitions in `srcpkgs/<pkgname>/template`:
+### Step 3: Authoring a Package
+Create `srcpkgs/<pkgname>/template`:
 ```bash
-# Required template variables
 pkgname=<pkgname>
 version=<version>
 revision=1
-build_style=<meson|cmake|gnu-configure|python3-pep517|cargo|meta>
-short_desc="<Summary under 72 chars>"
-maintainer="CasperGamingOne <caspergamingone@users.noreply.github.com>"
+short_desc="<Concise description under 72 chars>"
+maintainer="CasperGamingOne <caspergamingone@proton.me>"
 license="<SPDX License>"
 homepage="<https://...>"
-distfiles="<https://...>"
-checksum=<sha256>
 ```
-Always lint before building:
+Lint before building:
 ```bash
 xlint srcpkgs/<pkgname>/template
 ```
 
-### Phase 4: Compiling Packages
-Build package using the helper script:
+### Step 4: Compiling Locally
 ```bash
 ./scripts/build-pkg.sh <pkgname>
 ```
 Output packages land in `binpkgs/<arch>/`.
 
-### Phase 5: Indexing & Signing Locally
+### Step 5: Signing and Indexing
 ```bash
 ./scripts/sign-repo.sh
 ```
-- Uses private key from `~/.local/share/cgo-void-repo/cgo-void-repo.rsa`.
-- Adds packages via `xbps-rindex -a`.
-- Signs `<arch>-repodata` with `xbps-rindex --sign`.
-- Cleans stale package versions via `xbps-rindex -c`.
 
-### Phase 6: Local System Testing
-To install and test on the local machine immediately:
+### Step 6: Deploying to GitHub
 ```bash
-./scripts/install-local.sh
-sudo xbps-install <pkgname>
+git add srcpkgs/ docs/ scripts/ repo-keys/
+git commit -m "feat(pkg): add <pkgname>"
+git push origin main
 ```
-
-### Phase 7: GitHub Pages & Releases Deployment
-1. Commit template changes, website updates, and public keys:
-   ```bash
-   git add srcpkgs/ docs/ repo-keys/
-   git commit -m "feat(pkg): add <pkgname>"
-   git push origin main
-   ```
-2. For releases, push a version tag:
-   ```bash
-   git tag v1.0.0
-   git push origin v1.0.0
-   ```
-3. The GitHub Actions workflow (`.github/workflows/build-and-release.yml`):
-   - Compiles packages inside `ghcr.io/void-linux/void-glibc-full:latest`.
-   - Signs repodata using repository secret `RSA_PRIVATE_KEY`.
-   - Generates the website and package catalog dynamically via `scripts/generate-web.py`.
-   - Automatically commits & pushes the entire website and binary repository to the `gh-pages` branch.
-   - Deploys directly to GitHub Pages via the GitHub Pages deployment API.
-   - Attaches binary packages to GitHub Releases on version tags.
+For official releases with binaries attached:
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
 
 ---
 
-## 6. Troubleshooting Playbook for the Agent
+## 8. Troubleshooting Matrix
 
-| Issue | Cause | Agent Action |
+| Symptom / Error | Root Cause | Verified Agent Solution |
 | :--- | :--- | :--- |
-| `Signing key not found` | Private key not yet generated | Run `./scripts/gen-keys.sh` to initialize `~/.local/share/cgo-void-repo/`. |
-| `Private key in git status` | Accidentally copied key into repo | Stop immediately, delete key from repo, ensure it is only in `~/.local/share/`. |
-| `XLibre dependency conflict` | Package declares conflicting xorg-server | Change dependency to modular X11 libs (e.g. `libX11-devel`). |
-| `GitHub Pages 404 on .xbps` | Jekyll filtering unlisted extensions | Verify `docs/.nojekyll` exists and is tracked in git. |
-| `Checksum mismatch` | Source tarball changed upstream | Run `xgensum -f srcpkgs/<pkg>/template`. |
-| `failed to write to /proc/self/uid_map` | Docker/CI blocking user namespaces | Set `XBPS_CHROOT_CMD=uchroot` and add user to `xbuilder` group. |
+| `failed to resolve reference ...: not found` | Using non-existent `xbps-src-masterdir` image | Switch workflow container to `ghcr.io/void-linux/void-glibc-full:latest`. |
+| `missing <pkg>_package() function!` | Template was symlinked (`ln -sf`) into `void-packages` | Use `cp -a` instead of `ln -s`. Symlinks are reserved for subpackages. |
+| `ERROR: xbps-src cannot be used as root.` | Container running as UID 0 | Create user `builder` and execute with `runuser -u builder -g xbuilder`. |
+| `failed to write to /proc/self/uid_map` | User namespaces blocked on Ubuntu 24.04 runners | Add `builder` to `xbuilder` group, set `XBPS_CHROOT_CMD=uchroot`, add `options: --privileged`. |
+| `Stopping at filesystem boundary` | Git detecting mounted container filesystems | Export `GIT_DISCOVERY_ACROSS_FILESYSTEM=1` and `git config --global --add safe.directory "*"`. |
+| `404 Not Found` for `.xbps` on GitHub Pages | Jekyll engine ignoring binary or unlisted files | Ensure `docs/.nojekyll` exists and is published in the root of the site. |
+| `Checksum mismatch` during build | Upstream release archive was modified or corrupted | Run `xgensum -f srcpkgs/<pkgname>/template` to recompute sha256. |
+| `Signing key not found` locally | Key generator script not yet executed | Run `./scripts/gen-keys.sh` to initialize `~/.local/share/cgo-void-repo/`. |
