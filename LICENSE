@@ -34,16 +34,15 @@ SOFTWARE.
 
 ---
 
-## 2. Personal Branding, Logos & Creative Assets (Mine and Only Mine)
+## 2. Personal Brand Identity & Creative Assets
 
-All branding, logos, banners, avatars, and project names are **mine personally and only mine** (**CasperGamingOne** and **Games4Everyone**).
+The visual assets, names, and logos in this repository represent the personal creator identity and creative work of **CasperGamingOne** (**Games4Everyone**).
 
-* **Excluded from the MIT License**: The MIT License applies exclusively to the software, scripts, templates, and technical configuration. It does **not** grant any permissions to use or copy my personal branding.
-* **Protected Assets**:
-  * The name **"CasperGamingOne"**
-  * The name **"Games4Everyone"**
-  * The repository title and banner identity **"cgo-void-repo"**
-  * My personal avatar / logo (`docs/assets/personal-logo.jpeg`)
-  * The **Games4Everyone** logo (`docs/assets/games4everyone-logo.png`)
-  * The custom banner artwork (`docs/assets/banner.jpeg`)
-* **No Permission Granted**: You do not have permission to use, copy, remix, or distribute my personal branding, avatar, logos, or banner for your own projects, websites, or repositories without my direct personal permission.
+* **Exclusion from the Open Source License**: The MIT License provided above applies strictly to the software code, packaging templates, build scripts, and technical documentation. It does not extend to personal branding, brand marks, or creative imagery.
+* **Reserved Assets**:
+  * The creator names **"CasperGamingOne"** and **"Games4Everyone"**
+  * The repository title and project identifier **"cgo-void-repo"**
+  * The personal avatar and profile graphics (`docs/assets/personal-logo.jpeg`)
+  * The **Games4Everyone** project logo (`docs/assets/games4everyone-logo.png`)
+  * The repository header and banner artwork (`docs/assets/banner.jpeg`)
+* **Usage Restrictions**: These assets belong solely to the creator. Any reproduction, modification, distribution, or use of these names, logos, or artworks in external projects, forks, websites, or repositories requires explicit, prior written consent from CasperGamingOne.

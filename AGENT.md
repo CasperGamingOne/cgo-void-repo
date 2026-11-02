@@ -35,13 +35,13 @@ Because this repository is public on GitHub and hosted via GitHub Pages:
 
 ---
 
-## 2.1 Personal Branding & Ownership Directives
+## 2.1 Personal Brand Identity & Ownership Directives
 
 > [!IMPORTANT]
 > **BRANDING AND LOGOS ARE STRICTLY PERSONAL**
-> - The code, templates, and scripts in this repo are open-source under the MIT License.
-> - **Branding is exempt**: The names **CasperGamingOne**, **Games4Everyone**, the logos, avatar, banner, and assets under `docs/assets/` are owned personally and solely by CasperGamingOne.
-> - When generating templates, documentation, or new web assets, preserve and respect the owner's personal identity. Do not license brand assets under open-source terms.
+> - The software, templates, and scripts in this repo are open-source under the MIT License.
+> - **Branding is exempt**: The creator names **CasperGamingOne**, **Games4Everyone**, the logos, avatar, banner, and assets under `docs/assets/` belong solely to CasperGamingOne.
+> - When generating templates, documentation, or new web assets, preserve and respect the creator's personal identity. Brand assets and creator names must never be licensed under open-source terms.
 
 ---
 

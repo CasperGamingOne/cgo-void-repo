@@ -87,5 +87,5 @@ sudo xbps-install -S
 ## 📄 License & Personal Branding
 
 * **Software & Scripts**: The packaging templates, build scripts, automation code, and configuration files are licensed under the [MIT License](LICENSE).
-* **Personal Branding & Assets**: All branding, logos, avatars, custom banners, and the names **CasperGamingOne** and **Games4Everyone** are **mine personally and only mine**. They are not included under the MIT License and may not be reused or redistributed without my personal permission. See [LICENSE](LICENSE) for full details.
+* **Personal Branding & Assets**: All brand names, logos, avatars, and banner artworks are personal creative assets belonging solely to **CasperGamingOne** (**Games4Everyone**). They are excluded from the MIT License and may not be used, modified, or reproduced without explicit prior consent. See [LICENSE](LICENSE) for details.
 
