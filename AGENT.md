@@ -148,7 +148,7 @@ These hard-won lessons prevent errors that cause builds and CI workflows to brea
   ERROR: [trans] failed to download `<pkg>' signature from `<repo-url>': Not Found
   ERROR: Transaction failed! see above for errors.
   ```
-- **The Fix**: Always sign binary packages with `xbps-rindex --sign-pkg --privkey <key> ./*.xbps` to produce `.sig2` files, sign the repository index with `xbps-rindex --sign`, and upload both `.xbps` and `.sig2` alongside repodata to the distribution release. Ensure the GitHub Actions secret `RSA_PRIVATE_KEY` is configured in repository secrets.
+- **The Fix**: Always sign binary packages with `xbps-rindex -f --sign-pkg --privkey <key> ./*.xbps` to produce `.sig2` files (using `-f` to force re-signing existing signatures), sign the repository index with `xbps-rindex --sign`, and upload matching `.xbps` binaries, `.sig2` signatures, and repodata to the distribution release. Ensure the GitHub Actions secret `RSA_PRIVATE_KEY` is configured in repository secrets. Never mix binaries and signatures from different builds.
 
 ---
 
