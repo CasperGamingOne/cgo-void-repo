@@ -19,6 +19,7 @@ fi
 mkdir -p "${VOID_PACKAGES_DIR}/etc"
 if [ ! -f "${VOID_PACKAGES_DIR}/etc/conf.x86_64-v3" ]; then
     cat > "${VOID_PACKAGES_DIR}/etc/conf.x86_64-v3" << 'EOF'
+XBPS_CHROOT_CMD=uchroot
 XBPS_ALLOW_RESTRICTED=yes
 XBPS_CFLAGS="-O3 -march=x86-64-v3 -pipe"
 XBPS_CXXFLAGS="-O3 -march=x86-64-v3 -pipe"
