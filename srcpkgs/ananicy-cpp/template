@@ -1,0 +1,31 @@
+# Template file for 'ananicy-cpp'
+pkgname=ananicy-cpp
+version=1.2.0
+revision=1
+_rules_ver=1.1.49
+build_style=cmake
+build_wrksrc="ananicy-cpp-v${version}"
+configure_args="-DENABLE_SYSTEMD=OFF -DUSE_BPF_PROC_IMPL=OFF
+ -DUSE_EXTERNAL_JSON=ON -DUSE_EXTERNAL_FMTLIB=ON
+ -DUSE_EXTERNAL_SPDLOG=ON -DENABLE_REGEX_SUPPORT=ON
+ -DVERSION=${version}"
+hostmakedepends="cmake pkg-config"
+makedepends="json-c++ fmt-devel spdlog pcre2-devel"
+short_desc="C++ rewrite of ananicy, auto-nice daemon with CachyOS community rules"
+maintainer="CasperGamingOne <caspergamingone@proton.me>"
+license="GPL-3.0-or-later"
+homepage="https://gitlab.com/ananicy-cpp/ananicy-cpp"
+distfiles="https://gitlab.com/ananicy-cpp/ananicy-cpp/-/archive/v${version}/ananicy-cpp-v${version}.tar.gz
+ https://github.com/CachyOS/ananicy-rules/archive/refs/tags/${_rules_ver}.tar.gz>ananicy-rules-${_rules_ver}.tar.gz"
+checksum="d75157b9588748ce6ae04c3e2d71625d8eec6bf2d23e06f8cb6f9687c74813f7
+ 91da2ae358f1f83e4a3e3b9b42abacf235be75f347a9b1ede1b3dd67a2dae5a6"
+
+post_install() {
+	vdoc README.md
+
+	vmkdir etc/ananicy.d
+	cp -r ../ananicy-rules-${_rules_ver}/* "${DESTDIR}/etc/ananicy.d/"
+	rm -rf "${DESTDIR}/etc/ananicy.d"/{.gitattributes,.github,.gitignore,README.md,LICENSE}
+
+	vsv ananicy-cpp
+}

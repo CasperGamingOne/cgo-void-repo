@@ -15,6 +15,7 @@ import shutil
 from pathlib import Path
 
 SOURCE_BUILT_PACKAGES = {
+    "ananicy-cpp",
     "noctalia",
     "noctalia-greeter",
     "umbriel",
