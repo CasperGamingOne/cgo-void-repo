@@ -59,6 +59,36 @@
       "restricted": "no"
     },
     {
+      "pkgname": "linux-cachyos-lts",
+      "version": "6.18.60",
+      "revision": "1",
+      "short_desc": "Linux LTS kernel with CachyOS BORE scheduler (${version%.*} series)",
+      "homepage": "https://github.com/CachyOS/linux-cachyos",
+      "license": "GPL-2.0-only",
+      "maintainer": "CasperGamingOne <caspergamingone@proton.me>",
+      "restricted": "no"
+    },
+    {
+      "pkgname": "linux-cachyos-lts",
+      "version": "6.18.60",
+      "revision": "1",
+      "short_desc": "Linux LTS kernel with CachyOS BORE scheduler (${version%.*} series)",
+      "homepage": "https://github.com/CachyOS/linux-cachyos",
+      "license": "GPL-2.0-only",
+      "maintainer": "CasperGamingOne <caspergamingone@proton.me>",
+      "restricted": "no"
+    },
+    {
+      "pkgname": "linux-cachyos-lts",
+      "version": "6.18.60",
+      "revision": "1",
+      "short_desc": "Linux LTS kernel with CachyOS BORE scheduler (${version%.*} series)",
+      "homepage": "https://github.com/CachyOS/linux-cachyos",
+      "license": "GPL-2.0-only",
+      "maintainer": "CasperGamingOne <caspergamingone@proton.me>",
+      "restricted": "no"
+    },
+    {
       "pkgname": "megasync",
       "version": "6.7.0",
       "revision": "1",

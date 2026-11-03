@@ -16,6 +16,8 @@ from pathlib import Path
 
 SOURCE_BUILT_PACKAGES = {
     "ananicy-cpp",
+    "linux-cachyos-lts",
+    "linux-cachyos-lts-headers",
     "noctalia",
     "noctalia-greeter",
     "umbriel",

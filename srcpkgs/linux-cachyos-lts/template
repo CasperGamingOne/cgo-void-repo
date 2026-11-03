@@ -1,0 +1,211 @@
+# Template file for 'linux-cachyos-lts'
+pkgname=linux-cachyos-lts
+version=6.18.60
+revision=1
+short_desc="Linux LTS kernel with CachyOS BORE scheduler (${version%.*} series)"
+maintainer="CasperGamingOne <caspergamingone@proton.me>"
+license="GPL-2.0-only"
+homepage="https://github.com/CachyOS/linux-cachyos"
+
+distfiles="${KERNEL_SITE}/kernel/v${version%%.*}.x/linux-${version%.*}.tar.xz"
+if [ "${version##*.}" != 0 ]; then
+	distfiles+=" ${KERNEL_SITE}/kernel/v${version%%.*}.x/patch-${version}.xz"
+	skip_extraction="patch-${version}.xz"
+fi
+
+checksum="9106a4605da9e31ff17659d958782b815f9591ab308d03b0ee21aad6c7dced4b
+ ddd360daa10fcfe1c04759fc5254e44254e69b7e95973b0c1dd6e05540534771"
+
+python_version=3
+archs="x86_64*"
+
+nodebug=yes
+nostrip=yes
+noverifyrdeps=yes
+noshlibprovides=yes
+preserve=yes
+
+hostmakedepends="tar xz bc elfutils-devel flex gmp-devel kmod libmpc-devel
+ pkg-config openssl-devel perl uboot-mkimage cpio pahole python3 zstd"
+
+_kernver="${version/rc/0-rc}-cachyos_${revision}"
+triggers="kernel-hooks"
+kernel_hooks_version="${_kernver}"
+
+mutable_files="
+ /usr/lib/modules/${_kernver}/modules.builtin.bin
+ /usr/lib/modules/${_kernver}/modules.builtin.alias.bin
+ /usr/lib/modules/${_kernver}/modules.softdep
+ /usr/lib/modules/${_kernver}/modules.dep
+ /usr/lib/modules/${_kernver}/modules.dep.bin
+ /usr/lib/modules/${_kernver}/modules.symbols
+ /usr/lib/modules/${_kernver}/modules.symbols.bin
+ /usr/lib/modules/${_kernver}/modules.alias
+ /usr/lib/modules/${_kernver}/modules.alias.bin
+ /usr/lib/modules/${_kernver}/modules.devname"
+
+export KBUILD_BUILD_TIMESTAMP=$(LC_ALL=C date -ud @${SOURCE_DATE_EPOCH:-0})
+export KBUILD_BUILD_USER=cgo-void-repo
+export KBUILD_BUILD_HOST=caspergamingone
+
+if [ "$CROSS_BUILD" ]; then
+	_cross="CROSS_COMPILE=${XBPS_CROSS_TRIPLET}-"
+fi
+
+post_extract() {
+	if [ "${version##*.}" = 0 ]; then
+		return 0
+	fi
+	msg_normal "Applying upstream patch-6.18.60...\n"
+	xzcat ${XBPS_SRCDISTDIR}/${pkgname}-${version}/patch-${version}.xz |
+		patch -sNp1 -F0
+}
+
+post_patch() {
+	vsed -e "s|\$(STRIP) \(--strip-debug -o \$@ \$<;\)|/usr/bin/${STRIP} \1|" -i drivers/firmware/efi/libstub/Makefile
+}
+
+do_configure() {
+	local arch=x86_64
+
+	cp -f ${FILESDIR}/x86_64-dotconfig .config
+	make ${makejobs} ARCH=$arch ${_cross} olddefconfig
+
+	# Localversion branding
+	sed -i -e "s|^\(CONFIG_LOCALVERSION=\).*|\1\"-cachyos_${revision}\"|" .config
+}
+
+do_build() {
+	local arch=x86_64
+	local _args="bzImage modules"
+
+	export LDFLAGS=
+	local extra_kcflags="-O2 -pipe"
+	if echo "${XBPS_CFLAGS}" | grep -q "x86-64-v3"; then
+		extra_kcflags="-march=x86-64-v3 -O3 -pipe"
+		msg_normal "Building linux-cachyos-lts kernel with x86_64-v3 optimizations: ${extra_kcflags}\n"
+	else
+		msg_normal "Building linux-cachyos-lts kernel with generic baseline flags: ${extra_kcflags}\n"
+	fi
+	export KCFLAGS="-ffile-prefix-map=$wrksrc=. ${extra_kcflags}"
+	make ARCH=$arch ${_cross} ${makejobs} prepare
+	make ARCH=$arch ${_cross} ${makejobs} ${_args}
+}
+
+do_install() {
+	local arch=x86_64 subarch=x86_64 hdrdest
+
+	sed -i '2iexit 0' scripts/depmod.sh
+	vmkdir usr/lib
+	ln -sf usr/lib/ ${DESTDIR}
+
+	# Install kernel, firmware and modules
+	make ${makejobs} ARCH=${subarch:-$arch} INSTALL_MOD_PATH=${DESTDIR} ${_cross} modules_install
+
+	hdrdest=${DESTDIR}/usr/src/kernel-headers-${_kernver}
+
+	vinstall .config 644 boot config-${_kernver}
+	vinstall System.map 644 boot System.map-${_kernver}
+	vinstall arch/x86/boot/bzImage 644 boot vmlinuz-${_kernver}
+
+	vmkdir usr
+	cd ${DESTDIR}/usr/lib/modules/${_kernver}
+	rm -f source build
+	ln -sf ../../../src/kernel-headers-${_kernver} build
+
+	cd ${wrksrc}
+	install -Dm644 Makefile ${hdrdest}/Makefile
+	install -Dm644 Kbuild ${hdrdest}/Kbuild
+	install -Dm644 kernel/Makefile ${hdrdest}/kernel/Makefile
+	install -Dm644 .config ${hdrdest}/.config
+	for file in $(find . -name Kconfig\*); do
+		mkdir -p ${hdrdest}/$(dirname $file)
+		install -Dm644 $file ${hdrdest}/${file}
+	done
+	for file in $(find arch/${subarch:-$arch} scripts -name module.lds -o -name Kbuild.platforms -o -name Platform); do
+		mkdir -p ${hdrdest}/$(dirname $file)
+		install -Dm644 $file ${hdrdest}/${file}
+	done
+	mkdir -p ${hdrdest}/include
+	rm -rf ${DESTDIR}/usr/lib/firmware
+
+	for i in acpi asm-generic clocksource config crypto drm generated linux vdso \
+		math-emu media net pcmcia scsi sound trace uapi video xen dt-bindings hyperv keys; do
+		if [ -d include/$i ]; then
+			cp -a include/$i ${hdrdest}/include
+		fi
+	done
+
+	cd ${wrksrc}
+	mkdir -p ${hdrdest}/arch/${arch}
+	cp -a arch/${arch}/include ${hdrdest}/arch/${arch}
+
+	cp scripts/sign-file "${XBPS_WRAPPERDIR}"
+
+	if [ "$CROSS_BUILD" ]; then
+		make ${makejobs} ARCH=${subarch:-$arch} ${_cross} _mrproper_scripts
+		find scripts -name '*.o' -delete
+	fi
+
+	cp Module.symvers ${hdrdest}
+	cp -a scripts ${hdrdest}
+	mkdir -p ${hdrdest}/security/selinux
+	cp -a security/selinux/include ${hdrdest}/security/selinux
+	mkdir -p ${hdrdest}/tools/include
+	cp -a tools/include/tools ${hdrdest}/tools/include
+	if [ -d "arch/${arch}/tools" ]; then
+		cp -a "arch/${arch}/tools" "${hdrdest}/arch/${arch}"
+	fi
+	cp -a kernel/time/timeconst.bc "${hdrdest}/kernel/time"
+	cp -a kernel/bounds.c "${hdrdest}/kernel"
+	mkdir -p "${hdrdest}/arch/x86/entry/syscalls"
+	cp -a arch/x86/entry/syscalls/syscall_32.tbl "${hdrdest}/arch/x86/entry/syscalls"
+
+	mkdir -p ${hdrdest}/arch/${arch}/kernel
+	cp arch/${arch}/Makefile ${hdrdest}/arch/${arch}
+	mkdir -p ${hdrdest}/arch/x86/kernel
+	cp arch/x86/kernel/asm-offsets.s ${hdrdest}/arch/x86/kernel
+
+	mkdir -p ${hdrdest}/fs/xfs/libxfs
+	mkdir -p ${hdrdest}/mm
+	cp fs/xfs/libxfs/xfs_sb.h ${hdrdest}/fs/xfs/libxfs/xfs_sb.h
+
+	mkdir -p ${hdrdest}/tools/objtool
+	cp tools/objtool/objtool ${hdrdest}/tools/objtool
+
+	msg_normal "$pkgver: extracting debug info and compressing modules, please wait...\n"
+	install -Dm644 vmlinux ${DESTDIR}/usr/lib/debug/boot/vmlinux-${_kernver}
+	(
+	cd ${DESTDIR}
+	export DESTDIR
+	export SIGN_FILE="${XBPS_WRAPPERDIR}/sign-file sha512 ${wrksrc}/certs/signing_key.pem ${wrksrc}/certs/signing_key.x509"
+	find ./ -name '*.ko' -print0 | \
+		xargs -0r -n1 -P ${XBPS_MAKEJOBS} ${FILESDIR}/mv-debug
+	)
+	depmod -b ${DESTDIR}/usr -F System.map ${_kernver}
+	rm -f ${DESTDIR}/lib
+}
+
+linux-cachyos-lts-headers_package() {
+	preserve=yes
+	nostrip=yes
+	noshlibprovides=yes
+	short_desc+=" - source headers for 3rd party modules"
+	pkg_install() {
+		vmove usr/src
+		vmove usr/lib/modules/${_kernver}/build
+	}
+}
+
+linux-cachyos-lts-dbg_package() {
+	preserve=yes
+	nostrip=yes
+	noverifyrdeps=yes
+	noshlibprovides=yes
+	repository=debug
+	short_desc+=" - debugging symbols"
+	pkg_install() {
+		vmove usr/lib/debug
+		vmove "boot/System.map-${_kernver}"
+	}
+}

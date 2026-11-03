@@ -165,7 +165,7 @@ jobs:
               find hostdir/binpkgs -type f -name "${pkgname}-*.xbps" -exec cp -uv {} "$DIST_DIR/" \; || true
 
               # 2. Build or mirror v3
-              if [[ "$pkgname" == "ananicy-cpp"* || "$pkgname" == "noctalia"* || "$pkgname" == "umbriel"* || "$pkgname" == "xdg-desktop-portal-umbriel"* || "$pkgname" == "vmware-workstation"* ]]; then
+              if [[ "$pkgname" == "ananicy-cpp"* || "$pkgname" == "linux-cachyos-lts"* || "$pkgname" == "noctalia"* || "$pkgname" == "umbriel"* || "$pkgname" == "xdg-desktop-portal-umbriel"* || "$pkgname" == "vmware-workstation"* ]]; then
                 ./xbps-src -c x86_64-v3 -f pkg "$pkgname"
                 find hostdir/binpkgs -type f -name "${pkgname}-*.xbps" -exec cp -uv {} "$DIST_V3_DIR/" \; || true
               else
