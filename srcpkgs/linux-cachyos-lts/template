@@ -93,7 +93,7 @@ do_build() {
 }
 
 do_install() {
-	local arch=x86_64 subarch=x86_64 hdrdest
+	local arch=x86 subarch=x86_64 hdrdest
 
 	sed -i '2iexit 0' scripts/depmod.sh
 	vmkdir usr/lib
@@ -122,7 +122,7 @@ do_install() {
 		mkdir -p ${hdrdest}/$(dirname $file)
 		install -Dm644 $file ${hdrdest}/${file}
 	done
-	for file in $(find arch/${subarch:-$arch} scripts -name module.lds -o -name Kbuild.platforms -o -name Platform); do
+	for file in $(find arch/${arch} scripts -name module.lds -o -name Kbuild.platforms -o -name Platform); do
 		mkdir -p ${hdrdest}/$(dirname $file)
 		install -Dm644 $file ${hdrdest}/${file}
 	done
