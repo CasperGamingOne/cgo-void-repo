@@ -29,6 +29,19 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  notify-start:
+    name: Notify Discord on CI Start
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Send Discord Start Notification
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          DISCORD_CI_WEBHOOK: ${{ secrets.DISCORD_CI_WEBHOOK }}
+        run: |
+          python3 scripts/notify-ci.py started
+
   build:
     name: Build Packages & Generate Site
     runs-on: ubuntu-latest
@@ -315,3 +328,22 @@ jobs:
           files: dist/x86_64-v3/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  notify-finish:
+    name: Notify Discord on CI Result
+    needs: [build, deploy-pages, release-generic, release-v3]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Send Discord Result Notification
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          DISCORD_CI_WEBHOOK: ${{ secrets.DISCORD_CI_WEBHOOK }}
+          BUILD_RESULT: ${{ needs.build.result }}
+          PAGES_RESULT: ${{ needs.deploy-pages.result }}
+          GENERIC_RESULT: ${{ needs.release-generic.result }}
+          V3_RESULT: ${{ needs.release-v3.result }}
+        run: |
+          python3 scripts/notify-ci.py finish
