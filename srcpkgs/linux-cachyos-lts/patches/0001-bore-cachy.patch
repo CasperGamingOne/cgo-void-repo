@@ -914,7 +914,7 @@ index b2e4fd2070c4..6f3360a6c8ce 100644
  /*
   * The initial- and re-scaling of tunables is configurable
   *
-@@ -67,28 +71,32 @@
+@@ -67,18 +71,31 @@
   *   SCHED_TUNABLESCALING_LOG - scaled logarithmically, *1+ilog(ncpus)
   *   SCHED_TUNABLESCALING_LINEAR - scaled linear, *ncpus
   *
@@ -936,10 +936,6 @@ index b2e4fd2070c4..6f3360a6c8ce 100644
 + * (default min_base_slice = 2000000 constant, units: nanoseconds)
 + * EEVDF: default 0.70 msec * (1 + ilog(ncpus)), units: nanoseconds
   */
--#ifdef CONFIG_CACHY
--unsigned int sysctl_sched_base_slice			= 350000ULL;
--static unsigned int normalized_sysctl_sched_base_slice	= 350000ULL;
--#else
 +#ifdef CONFIG_SCHED_BORE
 +static const unsigned int nsecs_per_tick       = 1000000000ULL / HZ;
 +unsigned int sysctl_sched_min_base_slice       = CONFIG_MIN_BASE_SLICE_NS;
@@ -947,30 +943,11 @@ index b2e4fd2070c4..6f3360a6c8ce 100644
 +#else /* !CONFIG_SCHED_BORE */
  unsigned int sysctl_sched_base_slice			= 700000ULL;
  static unsigned int normalized_sysctl_sched_base_slice	= 700000ULL;
--#endif /* CONFIG_CACHY */
 +#endif /* CONFIG_SCHED_BORE */
  
--#ifdef CONFIG_CACHY
--__read_mostly unsigned int sysctl_sched_migration_cost	= 300000UL;
--#else
  __read_mostly unsigned int sysctl_sched_migration_cost	= 500000UL;
--#endif
  
  static int __init setup_sched_thermal_decay_shift(char *str)
- {
-@@ -131,12 +139,8 @@ int __weak arch_asym_cpu_priority(int cpu)
-  *
-  * (default: 5 msec, units: microseconds)
-  */
--#ifdef CONFIG_CACHY
--static unsigned int sysctl_sched_cfs_bandwidth_slice		= 3000UL;
--#else
- static unsigned int sysctl_sched_cfs_bandwidth_slice		= 5000UL;
- #endif
--#endif
- 
- #ifdef CONFIG_NUMA_BALANCING
- /* Restrict the NUMA promotion throughput (MB/s) for each target node. */
 @@ -202,6 +206,13 @@ static inline void update_load_set(struct load_weight *lw, unsigned long w)
   *
   * This idea comes from the SD scheduler of Con Kolivas:
@@ -1196,8 +1173,8 @@ index b2e4fd2070c4..6f3360a6c8ce 100644
  	if (dequeue_entities(rq, &p->se, flags) < 0)
  		return false;
  
-@@ -8893,6 +8960,16 @@ static void check_preempt_wakeup_fair(struct rq *rq, struct task_struct *p, int
- 	if (__pick_eevdf(cfs_rq, !do_preempt_short) == pse)
+@@ -9089,6 +9181,16 @@
+ 	if (nse == pse)
  		goto preempt;
  
 +#ifdef CONFIG_SCHED_BORE
@@ -1205,14 +1182,14 @@ index b2e4fd2070c4..6f3360a6c8ce 100644
 +			sched_feat(PREEMPT_SHORT_BORE) &&
 +			entity_is_task(pse) && entity_is_task(se) &&
 +			task_of(pse)->bore.penalty < task_of(se)->bore.penalty) {
-+		do_preempt_short = true;
++		preempt_action = PREEMPT_WAKEUP_SHORT;
 +		goto preempt;
 +	}
 +#endif /* CONFIG_SCHED_BORE */
 +
- 	if (sched_feat(RUN_TO_PARITY) && do_preempt_short)
- 		update_protect_slice(cfs_rq, se);
- 
+ 	/*
+ 	 * Because p is enqueued, nse being null can only mean that we
+ 	 * dequeued a delayed task. If there are still entities queued in
 @@ -9067,16 +9144,25 @@ static void yield_task_fair(struct rq *rq)
  	/*
  	 * Are we the only task in the tree?
@@ -1249,6 +1226,7 @@ index b2e4fd2070c4..6f3360a6c8ce 100644
  
  	set_task_max_allowed_capacity(p);
  
+
 diff --git a/kernel/sched/features.h b/kernel/sched/features.h
 index 136a6584be79..68c9a8f1a217 100644
 --- a/kernel/sched/features.h
