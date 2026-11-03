@@ -7,7 +7,7 @@ MODULES = \
 all: $(foreach m, $(MODULES), $m.ko)
 
 %.ko: %
-	$(MAKE) KVERSION=$(KVERSION) VM_KBUILD=yes -C $*-only
+	$(MAKE) KVERSION=$(KVERSION) VM_KBUILD=yes EXTRA_CFLAGS="$(EXTRA_CFLAGS)" -C $*-only
 
 $(MODULES): %:
 	cp -r $(SRCDIR)/$*-only $*-only

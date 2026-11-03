@@ -33,7 +33,6 @@ BINARY_ONLY_PACKAGES=(
     "antigravity-ide"
     "cgo-hello"
     "megasync"
-    "vmware-workstation"
 )
 
 is_binary_only() {

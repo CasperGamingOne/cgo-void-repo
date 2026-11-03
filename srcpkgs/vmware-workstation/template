@@ -1,7 +1,7 @@
 # Template file for 'vmware-workstation'
 pkgname=vmware-workstation
 version=26H1u1
-revision=2
+revision=3
 _buildver=25688693
 _installer_ver=3.1.0
 archs="x86_64"
@@ -93,6 +93,15 @@ do_install() {
 	install -m 644 "${FILESDIR}/Makefile" "${dkms_dir}/Makefile"
 	install -m 644 "${FILESDIR}/dkms.conf" "${dkms_dir}/dkms.conf"
 	sed -i -e "s/@PKGVER@/${version}/g" "${dkms_dir}/dkms.conf"
+
+	local extra_cflags="-O2 -pipe"
+	if echo "${XBPS_CFLAGS} ${CFLAGS}" | grep -q -- "-march=x86-64-v3"; then
+		extra_cflags="-march=x86-64-v3 -O3 -pipe"
+		msg_normal "Configuring vmware-workstation DKMS modules with x86_64-v3 optimization flags: ${extra_cflags}\n"
+	else
+		msg_normal "Configuring vmware-workstation DKMS modules with generic baseline flags: ${extra_cflags}\n"
+	fi
+	sed -i -e "s/@EXTRA_CFLAGS@/${extra_cflags}/g" "${dkms_dir}/dkms.conf"
 
 	tar -xf "vmware-vmx/lib/modules/source/vmmon.tar" -C "${dkms_dir}"
 	tar -xf "vmware-vmx/lib/modules/source/vmnet.tar" -C "${dkms_dir}"

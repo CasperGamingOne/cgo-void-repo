@@ -18,6 +18,7 @@ SOURCE_BUILT_PACKAGES = {
     "noctalia",
     "noctalia-greeter",
     "umbriel",
+    "vmware-workstation",
     "xdg-desktop-portal-umbriel",
 }
 
@@ -26,7 +27,6 @@ BINARY_PACKAGES = {
     "antigravity-ide",
     "cgo-hello",
     "megasync",
-    "vmware-workstation",
 }
 
 
