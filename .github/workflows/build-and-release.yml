@@ -101,6 +101,11 @@ jobs:
           PKGS_TO_BUILD=""
 
           for pkg_dir in "$GITHUB_WORKSPACE/cgo-void-repo/srcpkgs/"*; do
+            # Subpackage templates are symlinks to their parent template. They
+            # are built together with the parent and must not be queued alone.
+            if [ -L "$pkg_dir" ]; then
+              continue
+            fi
             if [ -d "$pkg_dir" ] && [ -f "$pkg_dir/template" ]; then
               pkgname=$(basename "$pkg_dir")
               ver=$(grep "^version=" "$pkg_dir/template" | cut -d'=' -f2 | tr -d '"' | tr -d "'")
@@ -169,8 +174,17 @@ jobs:
 
             for pkgname in $PKGS; do
               echo "==> Building package '$pkgname'..."
+              source_pkg_dir="$GITHUB_WORKSPACE/cgo-void-repo/srcpkgs/$pkgname"
               rm -rf "void-packages/srcpkgs/$pkgname"
-              cp -a "$GITHUB_WORKSPACE/cgo-void-repo/srcpkgs/$pkgname" "void-packages/srcpkgs/$pkgname"
+              cp -a "$source_pkg_dir" "void-packages/srcpkgs/$pkgname"
+
+              for template in "$GITHUB_WORKSPACE/cgo-void-repo/srcpkgs/"*; do
+                [ -L "$template" ] || continue
+                [ "$(readlink "$template")" = "$pkgname" ] || continue
+                template_name=$(basename "$template")
+                rm -rf "void-packages/srcpkgs/$template_name"
+                cp -a "$template" "void-packages/srcpkgs/$template_name"
+              done
               
               cd void-packages
               # 1. Build generic

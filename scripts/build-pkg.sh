@@ -192,6 +192,8 @@ PACKAGES_TO_BUILD=()
 
 if [ "${BUILD_ALL}" = true ] || [ "${BUILD_ALL_V3}" = true ]; then
     for dir in "${REPO_DIR}/srcpkgs"/*; do
+        # Subpackage templates are symlinks to their parent template.
+        [ -L "$dir" ] && continue
         if [ -d "$dir" ] && [ -f "$dir/template" ]; then
             PACKAGES_TO_BUILD+=("$(basename "$dir")")
         fi
