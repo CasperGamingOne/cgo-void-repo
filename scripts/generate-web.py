@@ -28,6 +28,7 @@ SOURCE_BUILT_PACKAGES = {
 BINARY_PACKAGES = {
     "antigravity",
     "antigravity-ide",
+    "artcraft-launcher",
     "cgo-hello",
     "megasync",
 }

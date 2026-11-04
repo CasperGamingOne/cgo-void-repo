@@ -151,15 +151,19 @@ def update_package(pkgname: str, check_only: bool = False):
     current_build = current_vars.get("_buildver")
     current_debrev = current_vars.get("_debrev")
 
-    if pkgname in ["noctalia", "noctalia-greeter"]:
-        repo = f"noctalia-dev/{pkgname}"
+    if pkgname in ["noctalia", "noctalia-greeter", "artcraft-launcher"]:
+        repo = "storytold/craft-launcher" if pkgname == "artcraft-launcher" else f"noctalia-dev/{pkgname}"
         print(f"[{pkgname}] Current local version: {current_ver}")
         target = fetch_github_release(repo)
         if not target:
             print(f"[{pkgname}] Unable to extract release info from GitHub API for {repo}.", file=sys.stderr)
             return False, None
         up_ver = target["version"]
-        up_url = target["url"]
+        up_url = (
+            f"https://github.com/{repo}/releases/download/v{up_ver}/artcraft-launcher-{up_ver}-linux-x86_64.tar.gz"
+            if pkgname == "artcraft-launcher"
+            else target["url"]
+        )
         print(f"[{pkgname}] Latest upstream release: {up_ver}")
 
         if current_ver == up_ver:
@@ -256,7 +260,7 @@ def main():
     check_only = "--check-only" in sys.argv
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
 
-    packages = ["antigravity", "antigravity-ide", "megasync", "noctalia", "noctalia-greeter"] if not args or args[0] == "--all" else args
+    packages = ["antigravity", "antigravity-ide", "artcraft-launcher", "megasync", "noctalia", "noctalia-greeter"] if not args or args[0] == "--all" else args
 
     updated_packages = []
     for pkg in packages:

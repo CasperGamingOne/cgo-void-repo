@@ -49,6 +49,16 @@
       "restricted": "yes"
     },
     {
+      "pkgname": "artcraft-launcher",
+      "version": "0.14.0",
+      "revision": "1",
+      "short_desc": "Craft App Suite installer, updater, and manager",
+      "homepage": "https://github.com/storytold/craft-launcher",
+      "license": "Apache-2.0, MIT",
+      "maintainer": "CasperGamingOne <caspergamingone@proton.me>",
+      "restricted": "no"
+    },
+    {
       "pkgname": "cgo-hello",
       "version": "1.0.0",
       "revision": "1",

@@ -32,6 +32,7 @@ fi
 BINARY_ONLY_PACKAGES=(
     "antigravity"
     "antigravity-ide"
+    "artcraft-launcher"
     "cgo-hello"
     "megasync"
 )
