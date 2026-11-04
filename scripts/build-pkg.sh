@@ -28,6 +28,14 @@ XBPS_TARGET_CXXFLAGS="${XBPS_TARGET_CFLAGS}"
 EOF
 fi
 
+# Ensure cgo-void-repo is trusted and configured as remote repo in void-packages
+mkdir -p "${VOID_PACKAGES_DIR}/etc/repo-keys" "${VOID_PACKAGES_DIR}/etc/xbps.d"
+cp -f "${REPO_DIR}/repo-keys"/*.plist "${VOID_PACKAGES_DIR}/etc/repo-keys/" 2>/dev/null || true
+if ! grep -q "CasperGamingOne/cgo-void-repo" "${VOID_PACKAGES_DIR}/etc/xbps.d/repos-remote.conf" 2>/dev/null; then
+    echo "repository=https://github.com/CasperGamingOne/cgo-void-repo/releases/download/rolling" >> "${VOID_PACKAGES_DIR}/etc/xbps.d/repos-remote.conf"
+    echo "repository=https://github.com/CasperGamingOne/cgo-void-repo/releases/download/rolling-v3" >> "${VOID_PACKAGES_DIR}/etc/xbps.d/repos-remote.conf"
+fi
+
 # Packages that are binary-only / noarch / proprietary (mirrored to both repos)
 BINARY_ONLY_PACKAGES=(
     "antigravity"

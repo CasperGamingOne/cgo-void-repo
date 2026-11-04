@@ -111,6 +111,15 @@ jobs:
             echo 'XBPS_CXXFLAGS="-O3 -march=x86-64-v3 -pipe"' >> etc/conf.x86_64-v3
             echo 'XBPS_TARGET_CFLAGS="-march=x86-64-v3 -mtune=generic"' >> etc/conf.x86_64-v3
             echo 'XBPS_TARGET_CXXFLAGS="${XBPS_TARGET_CFLAGS}"' >> etc/conf.x86_64-v3
+
+            # Configure and trust cgo-void-repo remote repository for resolving dependencies
+            mkdir -p etc/repo-keys
+            cp -f "$GITHUB_WORKSPACE/cgo-void-repo/repo-keys"/*.plist etc/repo-keys/ 2>/dev/null || true
+            mkdir -p /var/db/xbps/keys
+            cp -f "$GITHUB_WORKSPACE/cgo-void-repo/repo-keys"/* /var/db/xbps/keys/ 2>/dev/null || true
+            echo "repository=https://github.com/CasperGamingOne/cgo-void-repo/releases/download/rolling" >> etc/xbps.d/repos-remote.conf
+            echo "repository=https://github.com/CasperGamingOne/cgo-void-repo/releases/download/rolling-v3" >> etc/xbps.d/repos-remote.conf
+
             ./xbps-src binary-bootstrap
           EOF
 
@@ -139,6 +148,10 @@ jobs:
               rm -rf "void-packages/srcpkgs/$template_name"
               cp -a "$template" "void-packages/srcpkgs/$template_name"
             done
+
+            # Ensure masterdir has repo keys
+            mkdir -p void-packages/masterdir/var/db/xbps/keys
+            cp -f "$GITHUB_WORKSPACE/cgo-void-repo/repo-keys"/* void-packages/masterdir/var/db/xbps/keys/ 2>/dev/null || true
 
             cd void-packages
             echo "==> Compiling '$PKG' for channel '$CHANNEL'..."

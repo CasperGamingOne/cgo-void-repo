@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>public-key</key>
+	<data>LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUE2eENDbmQ5bDJ6OXhZdk5BMFZUbApYb2E4S0xrck0wbWtJaGlxbVhmT3FnRkp3Y1lJYlhCRnVSc29sc210Wkw0R3pIM0phMmNIRDNHeS9SdGgzTW5OCnMzb3l0Y21nQXRyZ3lRZ3Z3L0hYbjdMd29XSmVlK1VoOHlla3ZPWmtUbVY3a2FVVUo0Z1I3bUlPSFZLalgvWFUKOVJoUG9meTUwcDVEQkFyTEhVMnJhSFhDRXpKdmJRclRnYVBtdmVtWXh6a1M3dGJBVGdQNUtHNG5zRmVXcUovbAo3RHpaSlZsTFB1YlJJaytMN1Q3NUMvYytDNjJ6eno1Skg2Y2JoQy9jdDFUMWdwaXdFRGpBTlZTbHFVSWRkMktSCmZNUysyb3FVZXdDTkh5KzRveEFtTUphU0tJQXFqTkZTMmd5YURyMWNyMzBnM1F1WThraGhLc0ZxOHVBRUdpT28KMXdJREFRQUIKLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==</data>
+	<key>public-key-size</key>
+	<integer>2048</integer>
+	<key>signature-by</key>
+	<string>CasperGamingOne Void Repository</string>
+</dict>
+</plist>
