@@ -1,0 +1,10 @@
+case "$ACTION" in
+post)
+	if [ -f etc/default/grub ]; then
+		sed -i '/GRUB_TOP_LEVEL.*cachyos/d' etc/default/grub
+	fi
+	if [ -x usr/bin/update-grub ]; then
+		usr/bin/update-grub || :
+	fi
+	;;
+esac

@@ -34,7 +34,11 @@ BINARY_ONLY_PACKAGES=(
     "antigravity-ide"
     "artcraft-launcher"
     "cgo-hello"
+    "dolphin-megasync"
+    "linux-cachyos-lts-default"
+    "linux-cachyos-lts-meta"
     "megasync"
+    "noctalia-meta"
 )
 
 is_binary_only() {

@@ -1,0 +1,74 @@
+#!/bin/sh
+# cgo-cachyos-default - Utility to manage default CachyOS kernel in GRUB
+
+set -eu
+
+GRUB_CONF="/etc/default/grub"
+
+show_status() {
+    echo "=== CGO CachyOS Kernel Boot Status ==="
+    latest_cachyos="$(ls -v /boot/vmlinuz-*-cachyos* 2>/dev/null | tail -n 1 || true)"
+    if [ -n "$latest_cachyos" ]; then
+        echo "Installed CachyOS Kernel: $latest_cachyos"
+    else
+        echo "Installed CachyOS Kernel: None detected in /boot"
+    fi
+
+    if [ -f "$GRUB_CONF" ] && grep -q 'GRUB_TOP_LEVEL=.*cachyos' "$GRUB_CONF" 2>/dev/null; then
+        echo "GRUB Configuration: Active (CachyOS set as top-level default)"
+    else
+        echo "GRUB Configuration: Inactive (Standard GRUB boot order)"
+    fi
+}
+
+enable_cachyos() {
+    if [ "$(id -u)" -ne 0 ]; then
+        echo "Error: Must be run as root (or with sudo) to update GRUB configuration." >&2
+        exit 1
+    fi
+    if [ ! -f "$GRUB_CONF" ]; then
+        echo "Error: $GRUB_CONF not found." >&2
+        exit 1
+    fi
+    if grep -q 'GRUB_TOP_LEVEL=.*cachyos' "$GRUB_CONF" 2>/dev/null; then
+        echo "CachyOS is already configured as default in $GRUB_CONF."
+    else
+        echo 'GRUB_TOP_LEVEL="$(ls -v /boot/vmlinuz-*-cachyos* 2>/dev/null | tail -n 1)"' >> "$GRUB_CONF"
+        echo "Configured CachyOS default in $GRUB_CONF."
+    fi
+    if command -v update-grub >/dev/null 2>&1; then
+        echo "Updating GRUB configuration..."
+        update-grub
+    fi
+}
+
+disable_cachyos() {
+    if [ "$(id -u)" -ne 0 ]; then
+        echo "Error: Must be run as root (or with sudo) to update GRUB configuration." >&2
+        exit 1
+    fi
+    if [ -f "$GRUB_CONF" ]; then
+        sed -i '/GRUB_TOP_LEVEL.*cachyos/d' "$GRUB_CONF"
+        echo "Removed CachyOS default setting from $GRUB_CONF."
+    fi
+    if command -v update-grub >/dev/null 2>&1; then
+        echo "Updating GRUB configuration..."
+        update-grub
+    fi
+}
+
+case "${1:-status}" in
+    status)
+        show_status
+        ;;
+    enable)
+        enable_cachyos
+        ;;
+    disable)
+        disable_cachyos
+        ;;
+    *)
+        echo "Usage: cgo-cachyos-default [status|enable|disable]"
+        exit 1
+        ;;
+esac

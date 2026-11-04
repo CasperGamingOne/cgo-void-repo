@@ -1,0 +1,10 @@
+# Template file for 'linux-cachyos-lts-meta'
+pkgname=linux-cachyos-lts-meta
+version=6.18.60
+revision=1
+metapackage=yes
+depends="linux-cachyos-lts>=${version} linux-cachyos-lts-headers>=${version}"
+short_desc="Linux CachyOS LTS kernel and headers meta-package"
+maintainer="CasperGamingOne <caspergamingone@proton.me>"
+license="GPL-2.0-only"
+homepage="https://github.com/CachyOS/linux-cachyos"

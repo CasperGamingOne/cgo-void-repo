@@ -69,6 +69,16 @@
       "restricted": "no"
     },
     {
+      "pkgname": "dolphin-megasync",
+      "version": "6.2.0",
+      "revision": "1",
+      "short_desc": "MEGA Desktop App plugin for Dolphin file manager",
+      "homepage": "https://mega.io/desktop",
+      "license": "custom:MEGA LIMITED CODE LICENCE",
+      "maintainer": "CasperGamingOne <caspergamingone@proton.me>",
+      "restricted": "yes"
+    },
+    {
       "pkgname": "linux-cachyos-lts",
       "version": "6.18.60",
       "revision": "2",
@@ -79,10 +89,30 @@
       "restricted": "no"
     },
     {
+      "pkgname": "linux-cachyos-lts-default",
+      "version": "1.0.0",
+      "revision": "1",
+      "short_desc": "Configure CachyOS LTS as primary boot kernel in GRUB",
+      "homepage": "https://github.com/CasperGamingOne/cgo-void-repo",
+      "license": "MIT",
+      "maintainer": "CasperGamingOne <caspergamingone@proton.me>",
+      "restricted": "no"
+    },
+    {
       "pkgname": "linux-cachyos-lts-headers",
       "version": "6.18.60",
       "revision": "2",
       "short_desc": "Linux LTS kernel headers for 3rd-party DKMS modules (6.18 series)",
+      "homepage": "https://github.com/CachyOS/linux-cachyos",
+      "license": "GPL-2.0-only",
+      "maintainer": "CasperGamingOne <caspergamingone@proton.me>",
+      "restricted": "no"
+    },
+    {
+      "pkgname": "linux-cachyos-lts-meta",
+      "version": "6.18.60",
+      "revision": "1",
+      "short_desc": "Linux CachyOS LTS kernel and headers meta-package",
       "homepage": "https://github.com/CachyOS/linux-cachyos",
       "license": "GPL-2.0-only",
       "maintainer": "CasperGamingOne <caspergamingone@proton.me>",
@@ -115,6 +145,16 @@
       "short_desc": "Greeter for greetd based on Noctalia desktop shell",
       "homepage": "https://github.com/noctalia-dev/noctalia-greeter",
       "license": "MIT",
+      "maintainer": "CasperGamingOne <caspergamingone@proton.me>",
+      "restricted": "no"
+    },
+    {
+      "pkgname": "noctalia-meta",
+      "version": "5.4.1",
+      "revision": "1",
+      "short_desc": "Noctalia Wayland desktop environment meta-package",
+      "homepage": "https://github.com/noctalia-dev/noctalia",
+      "license": "Public Domain",
       "maintainer": "CasperGamingOne <caspergamingone@proton.me>",
       "restricted": "no"
     },

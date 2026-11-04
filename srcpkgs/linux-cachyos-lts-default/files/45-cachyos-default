@@ -1,0 +1,11 @@
+#!/bin/sh
+# /etc/kernel.d/post-install/45-cachyos-default
+# Kernel hook to maintain CachyOS LTS as default GRUB boot kernel
+
+GRUB_CONF="/etc/default/grub"
+
+if [ -f "$GRUB_CONF" ]; then
+    if ! grep -q 'GRUB_TOP_LEVEL=.*cachyos' "$GRUB_CONF" 2>/dev/null; then
+        echo 'GRUB_TOP_LEVEL="$(ls -v /boot/vmlinuz-*-cachyos* 2>/dev/null | tail -n 1)"' >> "$GRUB_CONF"
+    fi
+fi
