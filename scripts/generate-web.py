@@ -33,7 +33,7 @@ BINARY_PACKAGES = {
 }
 
 
-def parse_template(template_path: Path) -> dict:
+def parse_template(template_path: Path, pkg_override: str = None) -> dict:
     data = {
         "pkgname": "",
         "version": "",
@@ -45,27 +45,65 @@ def parse_template(template_path: Path) -> dict:
         "restricted": "no",
     }
     content = template_path.read_text(encoding="utf-8", errors="replace")
+    in_function = False
     for line in content.splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
             continue
-        for key in data.keys():
-            pattern = rf"^{key}=[\"']?(.*?)[\"']?$"
-            match = re.match(pattern, line)
-            if match:
-                data[key] = match.group(1).strip()
+        # Stop reading global top-level variables when functions begin
+        if line.endswith("()") or line.endswith("() {") or line.endswith("{"):
+            in_function = True
+        if not in_function:
+            for key in data.keys():
+                pattern = rf"^{key}=[\"']?(.*?)[\"']?$"
+                match = re.match(pattern, line)
+                if match:
+                    data[key] = match.group(1).strip()
+
+    # Expand any bash parameter expansions in short_desc if present
+    if data["version"]:
+        v = data["version"]
+        major_minor = ".".join(v.split(".")[:2]) if "." in v else v
+        data["short_desc"] = data["short_desc"].replace("${version%.*}", major_minor)
+        data["short_desc"] = data["short_desc"].replace("${version%%.*}", v.split(".")[0])
+        data["short_desc"] = data["short_desc"].replace("${version}", v)
+
+    # Subpackage handling (symlinked packages)
+    if pkg_override and pkg_override != data["pkgname"]:
+        data["pkgname"] = pkg_override
+        func_name = pkg_override.replace("-", "_")
+        subpkg_match = re.search(rf"{re.escape(pkg_override)}_package\(\)\s*\{{([^}}]+)\}}", content)
+        if not subpkg_match:
+            subpkg_match = re.search(rf"{re.escape(func_name)}_package\(\)\s*\{{([^}}]+)\}}", content)
+
+        if subpkg_match:
+            body = subpkg_match.group(1)
+            desc_set = re.search(r'short_desc=["\']?(.*?)["\']?$', body, re.MULTILINE)
+            desc_plus = re.search(r'short_desc\+=["\']?(.*?)["\']?$', body, re.MULTILINE)
+            if desc_set:
+                data["short_desc"] = desc_set.group(1).strip()
+            elif desc_plus:
+                data["short_desc"] = f"{data['short_desc']} {desc_plus.group(1).strip()}".strip()
+        else:
+            if "headers" in pkg_override:
+                data["short_desc"] = f"Kernel headers and development files for DKMS modules ({data.get('version', '')})"
+
     return data
 
 
 def scan_packages(srcpkgs_dir: Path) -> list:
     packages = []
+    seen_pkgnames = set()
     if not srcpkgs_dir.exists():
         return packages
     for item in sorted(srcpkgs_dir.iterdir()):
         template = item / "template"
-        if item.is_dir() and template.is_file():
-            meta = parse_template(template)
-            if meta["pkgname"]:
+        if (item.is_dir() or item.is_symlink()) and template.is_file():
+            pkg_override = item.name if item.is_symlink() else None
+            meta = parse_template(template, pkg_override=pkg_override)
+            pkgname = meta.get("pkgname")
+            if pkgname and pkgname not in seen_pkgnames:
+                seen_pkgnames.add(pkgname)
                 packages.append(meta)
     return packages
 
