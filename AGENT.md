@@ -233,6 +233,7 @@ These hard-won lessons prevent errors that break builds and CI workflows:
   3. Specify `python_version=ignore` to prevent shebang rewriting on bundled internal runtimes.
   4. Provide runit services `/etc/sv/vmware-networks` and `/etc/sv/vmware-usbarbitrator`.
   5. Bypass `vmware-modconfig` GUI check in `/usr/bin/vmware`.
+  6. **Preserve Internal Module Include Paths in DKMS**: When passing compiler optimization flags via `EXTRA_CFLAGS` in `dkms.conf`, GNU Make treats command-line variables as immutable, causing VMware's internal `Makefile.kernel` to drop its own `$(INCLUDE)` paths (triggering `fatal error: driver-config.h: No such file or directory` on `vmmon`). Patch `Makefile.kernel` in both `vmmon-only` and `vmnet-only` with `override EXTRA_CFLAGS := $(CC_OPTS) $(INCLUDE) $(VMW_CFLAGS) $(EXTRA_CFLAGS)`.
 
 ### Rule 14: GitHub Release 2 GiB Asset Limit (No Monolithic Debug Packages)
 - **Mistake**: Creating subpackages bundling uncompressed kernel debug symbols (`vmlinux` + `.ko.debug`).
@@ -326,3 +327,4 @@ git push origin main
 | `Checksum mismatch` during build | Upstream release archive was modified or corrupted | Run `xgensum -f srcpkgs/<pkgname>/template` to recompute sha256. |
 | `failed to download signature: Not Found` | Companion `.sig2` signature files missing from release | Run `xbps-rindex --sign-pkg` on all `.xbps` packages before pushing releases. |
 | `Signing key not found` locally | Key generator script not yet executed | Run `./scripts/gen-keys.sh` to initialize `~/.local/share/cgo-void-repo/`. |
+| `fatal error: driver-config.h: No such file or directory` in VMware DKMS | `EXTRA_CFLAGS` in `dkms.conf` overrides internal module include flags in `Makefile.kernel` | Add `override EXTRA_CFLAGS := $(CC_OPTS) $(INCLUDE) $(VMW_CFLAGS) $(EXTRA_CFLAGS)` in `vmmon` & `vmnet` patches. |

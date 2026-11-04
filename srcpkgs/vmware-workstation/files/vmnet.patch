@@ -15,6 +15,18 @@ diff --git a/vmnet-only/Makefile b/vmnet-only/Makefile
  
  # Header directory for the running kernel
  ifdef LINUXINCLUDE
+diff --git a/vmnet-only/Makefile.kernel b/vmnet-only/Makefile.kernel
+--- a/vmnet-only/Makefile.kernel
++++ b/vmnet-only/Makefile.kernel
+@@ -20,7 +20,7 @@
+ 
+ INCLUDE := -I$(SRCROOT)
+ 
+-EXTRA_CFLAGS := $(CC_OPTS) $(INCLUDE) $(VMW_CFLAGS)
++override EXTRA_CFLAGS := $(CC_OPTS) $(INCLUDE) $(VMW_CFLAGS) $(EXTRA_CFLAGS)
+ 
+ ccflags-y += $(EXTRA_CFLAGS)
+ 
 diff --git a/vmnet-only/driver.c b/vmnet-only/driver.c
 --- a/vmnet-only/driver.c
 +++ b/vmnet-only/driver.c

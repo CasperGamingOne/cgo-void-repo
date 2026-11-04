@@ -1,7 +1,7 @@
 # Template file for 'vmware-workstation'
 pkgname=vmware-workstation
 version=26H1u1
-revision=3
+revision=4
 _buildver=25688693
 _installer_ver=3.1.0
 archs="x86_64"

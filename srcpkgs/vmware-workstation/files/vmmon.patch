@@ -15,3 +15,15 @@ diff --git a/vmmon-only/Makefile b/vmmon-only/Makefile
  
  # Header directory for the running kernel
  ifdef LINUXINCLUDE
+diff --git a/vmmon-only/Makefile.kernel b/vmmon-only/Makefile.kernel
+--- a/vmmon-only/Makefile.kernel
++++ b/vmmon-only/Makefile.kernel
+@@ -20,7 +20,7 @@
+ CC_OPTS += -DVMMON -DVMCORE
+ 
+ INCLUDE := -I$(SRCROOT)/include -I$(SRCROOT)/include/x86 -I$(SRCROOT)/common -I$(SRCROOT)/linux
+-EXTRA_CFLAGS := $(CC_OPTS) $(INCLUDE) $(VMW_CFLAGS)
++override EXTRA_CFLAGS := $(CC_OPTS) $(INCLUDE) $(VMW_CFLAGS) $(EXTRA_CFLAGS)
+ 
+ ccflags-y += $(EXTRA_CFLAGS)
+
