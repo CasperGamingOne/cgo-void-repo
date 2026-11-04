@@ -173,8 +173,7 @@ do_install() {
 	mkdir -p ${hdrdest}/tools/objtool
 	cp tools/objtool/objtool ${hdrdest}/tools/objtool
 
-	msg_normal "$pkgver: extracting debug info and compressing modules, please wait...\n"
-	install -Dm644 vmlinux ${DESTDIR}/usr/lib/debug/boot/vmlinux-${_kernver}
+	msg_normal "$pkgver: stripping and compressing modules, please wait...\n"
 	(
 	cd ${DESTDIR}
 	export DESTDIR
@@ -183,6 +182,7 @@ do_install() {
 		xargs -0r -n1 -P ${XBPS_MAKEJOBS} ${FILESDIR}/mv-debug
 	)
 	depmod -b ${DESTDIR}/usr -F System.map ${_kernver}
+	rm -rf ${DESTDIR}/usr/lib/debug
 	rm -f ${DESTDIR}/lib
 }
 
@@ -194,18 +194,5 @@ linux-cachyos-lts-headers_package() {
 	pkg_install() {
 		vmove usr/src
 		vmove usr/lib/modules/${_kernver}/build
-	}
-}
-
-linux-cachyos-lts-dbg_package() {
-	preserve=yes
-	nostrip=yes
-	noverifyrdeps=yes
-	noshlibprovides=yes
-	repository=debug
-	short_desc+=" - debugging symbols"
-	pkg_install() {
-		vmove usr/lib/debug
-		vmove "boot/System.map-${_kernver}"
 	}
 }

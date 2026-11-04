@@ -42,9 +42,33 @@ jobs:
         run: |
           python3 scripts/notify-ci.py started
 
-  build:
-    name: Build Packages & Generate Site
+  plan-builds:
+    name: Plan Build Matrix
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix_planner.outputs.matrix }}
+      needs_build: ${{ steps.matrix_planner.outputs.needs_build }}
+      pkgs: ${{ steps.matrix_planner.outputs.pkgs }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Calculate Parallel Matrix
+        id: matrix_planner
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORCE_REBUILD: ${{ github.event.inputs.force_rebuild || 'false' }}
+        run: |
+          python3 scripts/generate-matrix.py
+
+  build-package:
+    name: Build ${{ matrix.pkg }} (${{ matrix.channel }})
+    needs: plan-builds
+    if: needs.plan-builds.outputs.needs_build == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.plan-builds.outputs.matrix) }}
     container:
       image: ghcr.io/void-linux/void-glibc-full:latest
       options: --privileged
@@ -59,89 +83,17 @@ jobs:
         run: |
           xbps-install -Syu || xbps-install -u xbps && xbps-install -Syu
           xbps-install -y git shadow python3 ca-certificates openssl xtools curl
-
-          # Setup builder user in xbuilder group for xbps-uchroot permissions
           useradd -m -G xbuilder -s /bin/bash builder || usermod -aG xbuilder builder
           chown root:xbuilder /usr/bin/xbps-uchroot || true
           chmod 4750 /usr/bin/xbps-uchroot || true
 
-      - name: Check repository package state & recover existing binaries
-        id: pkg_check
-        run: |
-          ARCH=$(xbps-uhelper arch 2>/dev/null || uname -m)
-          DIST_DIR="$GITHUB_WORKSPACE/cgo-void-repo/dist/x86_64"
-          DIST_V3_DIR="$GITHUB_WORKSPACE/cgo-void-repo/dist/x86_64-v3"
-          SITE_DIR="$GITHUB_WORKSPACE/cgo-void-repo/site"
-          mkdir -p "$DIST_DIR" "$DIST_V3_DIR" "$SITE_DIR"
-
-          # 1. Recover existing binary packages from GitHub Releases (both channels)
-          echo "==> Fetching existing packages from GitHub Releases..."
-          python3 -c "
-          import urllib.request, json, os
-
-          repo = '${{ github.repository }}'
-          headers = {'User-Agent': 'CI', 'Authorization': 'Bearer ${{ secrets.GITHUB_TOKEN }}'}
-
-          for tag, dest in [('rolling', '$DIST_DIR'), ('rolling-v3', '$DIST_V3_DIR')]:
-              url = f'https://api.github.com/repos/{repo}/releases/tags/{tag}'
-              try:
-                  req = urllib.request.Request(url, headers=headers)
-                  with urllib.request.urlopen(req, timeout=15) as resp:
-                      data = json.load(resp)
-                      for asset in data.get('assets', []):
-                          name = asset['name']
-                          if name.endswith('.xbps') or name.endswith('.sig2') or name.endswith('-repodata'):
-                              dl_url = asset['browser_download_url']
-                              print(f'==> Downloading [{tag}] asset: {name}')
-                              urllib.request.urlretrieve(dl_url, os.path.join(dest, name))
-              except Exception as e:
-                  print(f'Notice: Could not fetch prior [{tag}] release assets ({e}). Building fresh.')
-          " || true
-
-          # 2. Check which packages in srcpkgs need building
-          FORCE="${{ github.event.inputs.force_rebuild || 'false' }}"
-          PKGS_TO_BUILD=""
-
-          for pkg_dir in "$GITHUB_WORKSPACE/cgo-void-repo/srcpkgs/"*; do
-            # Subpackage templates are symlinks to their parent template. They
-            # are built together with the parent and must not be queued alone.
-            if [ -L "$pkg_dir" ]; then
-              continue
-            fi
-            if [ -d "$pkg_dir" ] && [ -f "$pkg_dir/template" ]; then
-              pkgname=$(basename "$pkg_dir")
-              ver=$(grep "^version=" "$pkg_dir/template" | cut -d'=' -f2 | tr -d '"' | tr -d "'")
-              rev=$(grep "^revision=" "$pkg_dir/template" | cut -d'=' -f2 | tr -d '"' | tr -d "'")
-              expected_bin="${pkgname}-${ver}_${rev}.${ARCH}.xbps"
-
-              if [ "$FORCE" != "true" ] && [ -f "$DIST_DIR/$expected_bin" ]; then
-                echo "==> Package '$pkgname' version $ver_$rev is already built ($expected_bin). Skipping."
-              else
-                echo "==> Package '$pkgname' ($expected_bin) is NOT present in repo. Mark for build!"
-                PKGS_TO_BUILD="${PKGS_TO_BUILD} ${pkgname}"
-              fi
-            fi
-          done
-
-          PKGS_TO_BUILD=$(echo "$PKGS_TO_BUILD" | xargs)
-          echo "Packages scheduled for build: '${PKGS_TO_BUILD}'"
-
-          if [ -n "$PKGS_TO_BUILD" ]; then
-            echo "needs_build=true" >> "$GITHUB_OUTPUT"
-            echo "pkgs=${PKGS_TO_BUILD}" >> "$GITHUB_OUTPUT"
-          else
-            echo "needs_build=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Checkout void-packages
-        if: steps.pkg_check.outputs.needs_build == 'true'
         uses: actions/checkout@v4
         with:
           repository: void-linux/void-packages
           path: void-packages
 
       - name: Prepare xbps-src build engine
-        if: steps.pkg_check.outputs.needs_build == 'true'
         run: |
           chown -R builder:builder "$GITHUB_WORKSPACE"
           runuser -u builder -g xbuilder -- bash << 'EOF'
@@ -161,8 +113,7 @@ jobs:
             ./xbps-src binary-bootstrap
           EOF
 
-      - name: Build packages (generic and v3)
-        if: steps.pkg_check.outputs.needs_build == 'true'
+      - name: Compile Package
         run: |
           chown -R builder:builder "$GITHUB_WORKSPACE"
           runuser -u builder -g xbuilder -- bash << 'EOF'
@@ -170,44 +121,101 @@ jobs:
             export GIT_DISCOVERY_ACROSS_FILESYSTEM=1
             cd "$GITHUB_WORKSPACE"
 
-            PKGS="${{ steps.pkg_check.outputs.pkgs }}"
-            DIST_DIR="$GITHUB_WORKSPACE/cgo-void-repo/dist/x86_64"
-            DIST_V3_DIR="$GITHUB_WORKSPACE/cgo-void-repo/dist/x86_64-v3"
-            mkdir -p "$DIST_DIR" "$DIST_V3_DIR"
+            PKG="${{ matrix.pkg }}"
+            CHANNEL="${{ matrix.channel }}"
+            PKG_OUT="$GITHUB_WORKSPACE/binpkgs"
+            mkdir -p "$PKG_OUT"
 
-            for pkgname in $PKGS; do
-              echo "==> Building package '$pkgname'..."
-              source_pkg_dir="$GITHUB_WORKSPACE/cgo-void-repo/srcpkgs/$pkgname"
-              rm -rf "void-packages/srcpkgs/$pkgname"
-              cp -a "$source_pkg_dir" "void-packages/srcpkgs/$pkgname"
+            # 1. Copy package template and related subpackage symlinks
+            source_pkg_dir="$GITHUB_WORKSPACE/cgo-void-repo/srcpkgs/$PKG"
+            rm -rf "void-packages/srcpkgs/$PKG"
+            cp -a "$source_pkg_dir" "void-packages/srcpkgs/$PKG"
 
-              for template in "$GITHUB_WORKSPACE/cgo-void-repo/srcpkgs/"*; do
-                [ -L "$template" ] || continue
-                [ "$(readlink "$template")" = "$pkgname" ] || continue
-                template_name=$(basename "$template")
-                rm -rf "void-packages/srcpkgs/$template_name"
-                cp -a "$template" "void-packages/srcpkgs/$template_name"
-              done
-              
-              cd void-packages
-              # 1. Build generic
-              ./xbps-src pkg "$pkgname"
-              find hostdir/binpkgs -type f -name "${pkgname}-*.xbps" -exec cp -uv {} "$DIST_DIR/" \; || true
-
-              # 2. Build or mirror v3
-              if [[ "$pkgname" == "ananicy-cpp"* || "$pkgname" == "linux-cachyos-lts"* || "$pkgname" == "noctalia"* || "$pkgname" == "umbriel"* || "$pkgname" == "xdg-desktop-portal-umbriel"* || "$pkgname" == "vmware-workstation"* ]]; then
-                ./xbps-src -c x86_64-v3 -f pkg "$pkgname"
-                find hostdir/binpkgs -type f -name "${pkgname}-*.xbps" -exec cp -uv {} "$DIST_V3_DIR/" \; || true
-              else
-                # Universal binary package: mirror
-                find "$DIST_DIR" -type f -name "${pkgname}-*.xbps" -exec cp -uv {} "$DIST_V3_DIR/" \; || true
-              fi
-
-              cd "$GITHUB_WORKSPACE"
+            for template in "$GITHUB_WORKSPACE/cgo-void-repo/srcpkgs/"*; do
+              [ -L "$template" ] || continue
+              [ "$(readlink "$template")" = "$PKG" ] || continue
+              template_name=$(basename "$template")
+              rm -rf "void-packages/srcpkgs/$template_name"
+              cp -a "$template" "void-packages/srcpkgs/$template_name"
             done
+
+            cd void-packages
+            echo "==> Compiling '$PKG' for channel '$CHANNEL'..."
+
+            if [ "$CHANNEL" = "x86_64-v3" ]; then
+              ./xbps-src -c x86_64-v3 -f pkg "$PKG"
+            else
+              ./xbps-src pkg "$PKG"
+            fi
+
+            # Collect binaries (explicitly exclude any huge debug archives)
+            find hostdir/binpkgs -type f -name "${PKG}*.xbps" ! -name "*-dbg*.xbps" -exec cp -uv {} "$PKG_OUT/" \; || true
           EOF
 
-      - name: Generate static website & index packages
+      - name: Upload Package Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binpkgs-${{ matrix.pkg }}-${{ matrix.channel }}
+          path: binpkgs/*
+
+  assemble-and-publish:
+    name: Assemble, Sign & Index Repository
+    needs: [plan-builds, build-package]
+    if: always() && needs.plan-builds.outputs.needs_build == 'true' && (needs.build-package.result == 'success' || needs.build-package.result == 'failure')
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/void-linux/void-glibc-full:latest
+      options: --privileged
+
+    steps:
+      - name: Checkout cgo-void-repo
+        uses: actions/checkout@v4
+        with:
+          path: cgo-void-repo
+
+      - name: Install dependencies & tools
+        run: |
+          xbps-install -Syu || xbps-install -u xbps && xbps-install -Syu
+          xbps-install -y git shadow python3 ca-certificates openssl xtools curl
+          useradd -m -G xbuilder -s /bin/bash builder || usermod -aG xbuilder builder
+
+      - name: Recover existing release binaries
+        run: |
+          DIST_DIR="$GITHUB_WORKSPACE/cgo-void-repo/dist/x86_64"
+          DIST_V3_DIR="$GITHUB_WORKSPACE/cgo-void-repo/dist/x86_64-v3"
+          mkdir -p "$DIST_DIR" "$DIST_V3_DIR"
+
+          python3 -c "
+          import urllib.request, json, os
+
+          repo = '${{ github.repository }}'
+          headers = {'User-Agent': 'CI', 'Authorization': 'Bearer ${{ secrets.GITHUB_TOKEN }}'}
+
+          for tag, dest in [('rolling', '$DIST_DIR'), ('rolling-v3', '$DIST_V3_DIR')]:
+              url = f'https://api.github.com/repos/{repo}/releases/tags/{tag}'
+              try:
+                  req = urllib.request.Request(url, headers=headers)
+                  with urllib.request.urlopen(req, timeout=15) as resp:
+                      data = json.load(resp)
+                      for asset in data.get('assets', []):
+                          name = asset['name']
+                          if name.endswith('.xbps') or name.endswith('.sig2') or name.endswith('-repodata'):
+                              # Skip legacy dbg assets
+                              if '-dbg' in name:
+                                  continue
+                              dl_url = asset['browser_download_url']
+                              print(f'==> Downloading [{tag}] asset: {name}')
+                              urllib.request.urlretrieve(dl_url, os.path.join(dest, name))
+              except Exception as e:
+                  print(f'Notice: Could not fetch prior [{tag}] release assets ({e}).')
+          " || true
+
+      - name: Download all newly built packages
+        uses: actions/download-artifact@v4
+        with:
+          path: downloaded-binpkgs
+
+      - name: Merge, Index, and Sign Packages
         env:
           RSA_KEY: ${{ secrets.RSA_PRIVATE_KEY }}
         run: |
@@ -218,14 +226,37 @@ jobs:
             SITE_DIR="$GITHUB_WORKSPACE/cgo-void-repo/site"
             DIST_DIR="$GITHUB_WORKSPACE/cgo-void-repo/dist/x86_64"
             DIST_V3_DIR="$GITHUB_WORKSPACE/cgo-void-repo/dist/x86_64-v3"
+            mkdir -p "$SITE_DIR" "$DIST_DIR" "$DIST_V3_DIR"
 
-            # 1. Run dynamic site generator
+            # 1. Distribute downloaded artifacts into dist/
+            if [ -d "$GITHUB_WORKSPACE/downloaded-binpkgs" ]; then
+              for art_dir in "$GITHUB_WORKSPACE/downloaded-binpkgs/binpkgs-"*; do
+                if [ -d "$art_dir" ]; then
+                  art_name=$(basename "$art_dir")
+                  echo "==> Merging artifact: $art_name"
+                  if [[ "$art_name" == *"-generic" ]]; then
+                    find "$art_dir" -type f -name "*.xbps" ! -name "*-dbg*" -exec cp -uv {} "$DIST_DIR/" \; || true
+                    pkg=$(echo "$art_name" | sed -e 's/^binpkgs-//' -e 's/-generic$//')
+                    if [[ ! "$pkg" =~ ^(ananicy-cpp|linux-cachyos-lts|noctalia|umbriel|xdg-desktop-portal-umbriel|vmware-workstation)$ ]]; then
+                      find "$art_dir" -type f -name "*.xbps" ! -name "*-dbg*" -exec cp -uv {} "$DIST_V3_DIR/" \; || true
+                    fi
+                  elif [[ "$art_name" == *"-x86_64-v3" ]]; then
+                    find "$art_dir" -type f -name "*.xbps" ! -name "*-dbg*" -exec cp -uv {} "$DIST_V3_DIR/" \; || true
+                  fi
+                fi
+              done
+            fi
+
+            # Clean any dangling dbg files
+            rm -f "$DIST_DIR"/*-dbg* "$DIST_V3_DIR"/*-dbg*
+
+            # 2. Run website generator
             python3 "$GITHUB_WORKSPACE/cgo-void-repo/scripts/generate-web.py" "$SITE_DIR"
             cp -a "$GITHUB_WORKSPACE/cgo-void-repo/docs/style.css" "$GITHUB_WORKSPACE/cgo-void-repo/docs/app.js" "$SITE_DIR/" 2>/dev/null || true
             cp -a "$GITHUB_WORKSPACE/cgo-void-repo/docs/assets" "$SITE_DIR/" 2>/dev/null || true
             touch "$SITE_DIR/.nojekyll"
 
-            # 2. Index and sign both distribution directories
+            # 3. Index and sign both distribution directories
             for dir in "$DIST_DIR" "$DIST_V3_DIR"; do
               if [ -d "$dir" ] && ls "$dir"/*.xbps >/dev/null 2>&1; then
                 cd "$dir"
@@ -256,13 +287,13 @@ jobs:
         with:
           path: cgo-void-repo/site
 
-      - name: Upload Built Generic Packages Artifact
+      - name: Upload Consolidated Generic Packages Artifact
         uses: actions/upload-artifact@v4
         with:
           name: xbps-packages-generic
           path: cgo-void-repo/dist/x86_64/*
 
-      - name: Upload Built v3 Packages Artifact
+      - name: Upload Consolidated v3 Packages Artifact
         uses: actions/upload-artifact@v4
         with:
           name: xbps-packages-v3
@@ -270,7 +301,8 @@ jobs:
 
   deploy-pages:
     name: Deploy Website to GitHub Pages
-    needs: build
+    needs: [assemble-and-publish]
+    if: always() && needs.assemble-and-publish.result == 'success'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -282,7 +314,8 @@ jobs:
 
   release-generic:
     name: Publish Generic Packages to rolling
-    needs: build
+    needs: [assemble-and-publish]
+    if: always() && needs.assemble-and-publish.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Download generic packages
@@ -315,7 +348,8 @@ jobs:
 
   release-v3:
     name: Publish Optimized Packages to rolling-v3
-    needs: build
+    needs: [assemble-and-publish]
+    if: always() && needs.assemble-and-publish.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Download v3 packages
@@ -348,7 +382,7 @@ jobs:
 
   notify-finish:
     name: Notify Discord on CI Result
-    needs: [build, deploy-pages, release-generic, release-v3]
+    needs: [plan-builds, build-package, assemble-and-publish, deploy-pages, release-generic, release-v3]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -358,7 +392,7 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
           DISCORD_CI_WEBHOOK: ${{ secrets.DISCORD_CI_WEBHOOK }}
-          BUILD_RESULT: ${{ needs.build.result }}
+          BUILD_RESULT: ${{ needs.build-package.result }}
           PAGES_RESULT: ${{ needs.deploy-pages.result }}
           GENERIC_RESULT: ${{ needs.release-generic.result }}
           V3_RESULT: ${{ needs.release-v3.result }}

@@ -114,6 +114,7 @@ cgo-void-repo/
 ├── scripts/
 │   ├── build-pkg.sh         # Modular builder with generic and --v3 support
 │   ├── check-updates.py     # Upstream version and sha256 update monitor
+│   ├── generate-matrix.py   # Parallel GitHub Actions matrix generator
 │   ├── generate-web.py      # Website and packages.json generator
 │   ├── notify-ci.py         # Discord CI/CD build tracker (start/finish/fail)
 │   ├── notify-requester.py  # Discord DM bot notification pipeline
