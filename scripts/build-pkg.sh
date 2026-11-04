@@ -158,6 +158,15 @@ build_package_variant() {
     rm -rf "${template_dst}"
     cp -a "${template_src}" "${template_dst}"
 
+    # Also sync related subpackage symlinks
+    for sublink in "${REPO_DIR}/srcpkgs"/*; do
+        [ -L "${sublink}" ] || continue
+        [ "$(readlink "${sublink}")" = "${pkg}" ] || continue
+        subname="$(basename "${sublink}")"
+        rm -rf "${VOID_PACKAGES_DIR}/srcpkgs/${subname}"
+        cp -a "${sublink}" "${VOID_PACKAGES_DIR}/srcpkgs/${subname}"
+    done
+
     cd "${VOID_PACKAGES_DIR}"
     local dest_dir
     if [ "${variant}" = "v3" ]; then

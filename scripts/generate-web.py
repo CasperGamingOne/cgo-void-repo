@@ -22,6 +22,7 @@ SOURCE_BUILT_PACKAGES = {
     "noctalia-greeter",
     "umbriel",
     "vmware-workstation",
+    "vmware-workstation-dkms",
     "xdg-desktop-portal-umbriel",
 }
 

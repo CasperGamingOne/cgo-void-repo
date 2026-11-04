@@ -229,7 +229,7 @@ These hard-won lessons prevent errors that break builds and CI workflows:
 ### Rule 13: Packaging Hypervisors with DKMS Kernel Modules (VMware Workstation Pro)
 - **Fix**:
   1. Extract `.bundle` with `skip_extraction` and `bash "${bundle}" --extract extracted`.
-  2. Place module sources under `/usr/src/<pkgname>-<version>/` with `triggers="dkms"`.
+  2. Place module sources under `/usr/src/<pkgname>-<version>/` inside a decoupled `vmware-workstation-dkms` subpackage with `triggers="dkms"` and `dkms_modules="vmware-workstation ${version}"`.
   3. Specify `python_version=ignore` to prevent shebang rewriting on bundled internal runtimes.
   4. Provide runit services `/etc/sv/vmware-networks` and `/etc/sv/vmware-usbarbitrator`.
   5. Bypass `vmware-modconfig` GUI check in `/usr/bin/vmware`.
@@ -254,6 +254,23 @@ These hard-won lessons prevent errors that break builds and CI workflows:
 - **Mistake**: Treating subpackage symlinks in `srcpkgs/` as parent packages, causing duplicate catalog rows with incorrect package names.
 - **Reason**: In Void Linux, subpackages (like `linux-cachyos-lts-headers`) are symlinks pointing to the parent directory (`linux-cachyos-lts`).
 - **Fix**: `scan_packages()` in `generate-web.py` inspects `item.is_symlink()`, passes `pkg_override`, parses the `<pkg>_package()` function body for custom `short_desc`, isolates shell variable assignments, and deduplicates entries by package name.
+
+### Rule 18: Mandatory DKMS Decoupling Standard (`<pkg>-dkms` Subpackages)
+- **Architectural Policy**: Kernel module sources must **NEVER** be packaged directly into the main application/software package. All out-of-tree kernel modules managed by DKMS must be completely decoupled into a standalone `<pkg>-dkms` subpackage.
+- **Packaging Requirements**:
+  1. **Userspace Main Package (`<pkg>`)**:
+     - Bundles applications, GUI binaries, libraries, runit services, desktop files, and configs.
+     - Declares `depends="<pkg>-dkms-${version}_${revision} ..."` to pull in required modules.
+     - Strictly **omits** `triggers="dkms"`, `dkms_modules`, and `depends="dkms"`.
+  2. **DKMS Subpackage (`<pkg>-dkms`)**:
+     - Declares `subpackages="<pkg>-dkms"` after `checksum=` in the parent template.
+     - Contains only DKMS module sources under `/usr/src/<pkg>-<version>/` via `pkg_install() { vmove usr/src; }`.
+     - Declares `depends="dkms"`, `triggers="dkms"`, and `dkms_modules="<pkg> ${version}"`.
+     - Short description must explicitly identify the DKMS nature (e.g. `short_desc="<App> - DKMS host kernel modules"`).
+  3. **Symlink Convention in `srcpkgs/`**:
+     - A companion symlink `srcpkgs/<pkg>-dkms -> <pkg>` must always exist in the `srcpkgs/` directory.
+     - `xbps-src` recognizes this symlink as a subpackage definition, routing build execution to `<pkg>-dkms_package()`.
+     - Local builders (`scripts/build-pkg.sh`) and CI workflows must synchronize these symlinks into `void-packages/srcpkgs/`.
 
 ---
 
