@@ -300,26 +300,10 @@ jobs:
           path: dist/x86_64
 
       - name: Publish / Update rolling Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: rolling
-          name: "Rolling Package Release (Generic x86_64)"
-          body: |
-            Automated baseline binary package builds for `cgo-void-repo` (Void Linux).
-            Universal compatibility for all 64-bit x86 systems.
-            
-            ### Setup
-            ```bash
-            sudo wget -O /var/db/xbps/keys/cgo-void-repo.pem https://caspergamingone.github.io/cgo-void-repo/cgo-void-repo.pem
-            echo "repository=https://github.com/CasperGamingOne/cgo-void-repo/releases/download/rolling" | sudo tee /etc/xbps.d/10-cgo-void-repo.conf
-            sudo xbps-install -S
-            ```
-          draft: false
-          prerelease: false
-          make_latest: "true"
-          files: dist/x86_64/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload rolling dist/x86_64/* --clobber
 
   release-v3:
     name: Publish Optimized Packages to rolling-v3
@@ -334,26 +318,10 @@ jobs:
           path: dist/x86_64-v3
 
       - name: Publish / Update rolling-v3 Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: rolling-v3
-          name: "Rolling Package Release (x86_64-v3 Optimized)"
-          body: |
-            Optimized microarchitecture package builds for `cgo-void-repo` (Void Linux).
-            Compiled with `-march=x86-64-v3 -O3 -pipe` (AVX, AVX2, FMA, BMI1/2).
-            
-            ### Setup
-            ```bash
-            sudo wget -O /var/db/xbps/keys/cgo-void-repo.pem https://caspergamingone.github.io/cgo-void-repo/cgo-void-repo.pem
-            echo "repository=https://github.com/CasperGamingOne/cgo-void-repo/releases/download/rolling-v3" | sudo tee /etc/xbps.d/10-cgo-void-repo.conf
-            sudo xbps-install -S
-            ```
-          draft: false
-          prerelease: false
-          make_latest: "false"
-          files: dist/x86_64-v3/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload rolling-v3 dist/x86_64-v3/* --clobber
 
   deploy-website:
     name: Build & Deploy Website to GitHub Pages
