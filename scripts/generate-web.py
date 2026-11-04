@@ -498,8 +498,6 @@ def main():
     repo_root = Path(__file__).resolve().parent.parent
     srcpkgs_dir = repo_root / "srcpkgs"
     repo_keys_dir = repo_root / "repo-keys"
-    assets_dir = repo_root / "assets"
-    
     docs_dir = repo_root / "docs"
     assets_dir = repo_root / "assets"
     if not assets_dir.is_dir():
@@ -520,10 +518,16 @@ def main():
     json_index = generate_json_index(packages, base_url)
     (site_dir / "packages.json").write_text(json.dumps(json_index, indent=2), encoding="utf-8")
 
-    # Copy verification key
-    pubkey = repo_keys_dir / "cgo-void-repo.pem"
-    if pubkey.is_file():
-        shutil.copy2(pubkey, site_dir / "cgo-void-repo.pem")
+    # Ensure GitHub Pages does not run Jekyll
+    (site_dir / ".nojekyll").touch()
+
+    # Copy verification keys
+    for key_name in ["cgo-void-repo.pem", "cgo-void-repo.rsa.pub"]:
+        for src_dir in [repo_keys_dir, docs_dir]:
+            key_file = src_dir / key_name
+            if key_file.is_file():
+                shutil.copy2(key_file, site_dir / key_name)
+                break
 
     # Copy branding assets
     if assets_dir.is_dir():
@@ -533,9 +537,9 @@ def main():
             if img.is_file():
                 shutil.copy2(img, dest_assets / img.name)
 
-    # Copy website static assets (CSS, JS, .nojekyll, pubkey)
+    # Copy website static assets (CSS, JS)
     if site_dir.resolve() != docs_dir.resolve():
-        for static_name in ["style.css", "app.js", ".nojekyll", "cgo-void-repo.rsa.pub", "cgo-void-repo.pem"]:
+        for static_name in ["style.css", "app.js"]:
             src = docs_dir / static_name
             if src.is_file():
                 shutil.copy2(src, site_dir / static_name)

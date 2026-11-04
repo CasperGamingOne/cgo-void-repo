@@ -176,13 +176,13 @@ build_package_variant() {
 
     mkdir -p "${dest_dir}"
     echo "--> Collecting generated package into ${dest_dir}..."
-    find "${VOID_PACKAGES_DIR}/hostdir/binpkgs" -maxdepth 1 -type f -name "${pkg}-*.xbps" -exec cp -uv {} "${dest_dir}/" \;
+    find "${VOID_PACKAGES_DIR}/hostdir/binpkgs" -type f -name "${pkg}*.xbps" ! -name "*-dbg*.xbps" -exec cp -uv {} "${dest_dir}/" \;
 
     # If it is binary-only, mirror to both directories
     if is_binary_only "${pkg}"; then
         mkdir -p "${REPO_DIR}/binpkgs/x86_64" "${REPO_DIR}/binpkgs/x86_64-v3"
-        find "${dest_dir}" -maxdepth 1 -type f -name "${pkg}-*.xbps" -exec cp -uv {} "${REPO_DIR}/binpkgs/x86_64/" \;
-        find "${dest_dir}" -maxdepth 1 -type f -name "${pkg}-*.xbps" -exec cp -uv {} "${REPO_DIR}/binpkgs/x86_64-v3/" \;
+        find "${dest_dir}" -type f -name "${pkg}*.xbps" ! -name "*-dbg*.xbps" -exec cp -uv {} "${REPO_DIR}/binpkgs/x86_64/" \;
+        find "${dest_dir}" -type f -name "${pkg}*.xbps" ! -name "*-dbg*.xbps" -exec cp -uv {} "${REPO_DIR}/binpkgs/x86_64-v3/" \;
     fi
 
     echo "=== Build finished for ${pkg} [${variant}] ==="

@@ -369,12 +369,7 @@ jobs:
 
       - name: Generate static website
         run: |
-          mkdir -p site
           python3 scripts/generate-web.py site
-          cp -a docs/style.css docs/app.js site/ 2>/dev/null || true
-          cp -a docs/assets site/ 2>/dev/null || true
-          cp -a repo-keys/cgo-void-repo.pem site/ 2>/dev/null || true
-          touch site/.nojekyll
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
