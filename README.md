@@ -77,17 +77,11 @@ sudo xbps-install -S
 
 ## 📦 Available Packages
 
-| Package | Version | Channel Availability | License | Description |
-|---|---|---|---|---|
-| **`antigravity`** | `2.28.2_1` | 🌐 Universal | `custom:Google-Antigravity` | Google Antigravity 2.0 multi-agent orchestration platform |
-| **`antigravity-ide`** | `2.6.0_1` | 🌐 Universal | `custom:Google-Antigravity` | Google Antigravity agent-first AI integrated development environment |
-| **`cgo-hello`** | `1.0.0_1` | 🌐 Universal | `MIT` | Welcome verification package |
-| **`megasync`** | `6.7.0_1` | 🌐 Universal | `custom:MEGA LIMITED CODE LICENCE` | Easy automated syncing for MEGA cloud drive |
-| **`noctalia`** | `5.4.1_1` | ⚡ `rolling-v3` & 📦 `rolling` | `MIT` | Sleek, customizable Wayland desktop shell |
-| **`noctalia-greeter`** | `1.7.0_1` | ⚡ `rolling-v3` & 📦 `rolling` | `MIT` | Greeter for greetd based on Noctalia desktop shell |
-| **`umbriel`** | `0.1.0_1` | ⚡ `rolling-v3` & 📦 `rolling` | `MIT` | Wayland compositor with effects built on wlroots 0.20 |
-| **`vmware-workstation`** | `26H1u1_2` | 🌐 Universal | `custom:Proprietary` | Industry-standard virtualization workstation with DKMS & runit services |
-| **`xdg-desktop-portal-umbriel`** | `0.1.0_1` | ⚡ `rolling-v3` & 📦 `rolling` | `MIT` | Desktop portal backend for Umbriel |
+The complete, real-time package catalog—including up-to-date versions, microarchitecture channel availability (`rolling` vs `rolling-v3`), licenses, and package details—is hosted on our live repository portal:
+
+👉 **[https://caspergamingone.github.io/cgo-void-repo](https://caspergamingone.github.io/cgo-void-repo)**
+
+You can also programmatically inspect the repository feed at [`packages.json`](https://caspergamingone.github.io/cgo-void-repo/packages.json).
 
 ---
 

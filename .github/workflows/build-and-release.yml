@@ -12,6 +12,7 @@ on:
       - 'scripts/**'
       - 'repo-keys/**'
       - '.github/workflows/**'
+      - 'README.md'
   workflow_dispatch:
     inputs:
       force_rebuild:
@@ -159,7 +160,7 @@ jobs:
           path: binpkgs/*
 
   assemble-and-publish:
-    name: Assemble, Sign & Index Repository
+    name: Assemble, Sign & Index Packages
     needs: [plan-builds, build-package]
     if: always() && needs.plan-builds.outputs.needs_build == 'true' && (needs.build-package.result == 'success' || needs.build-package.result == 'failure')
     runs-on: ubuntu-latest
@@ -223,10 +224,9 @@ jobs:
           runuser -u builder -g xbuilder -- env RSA_KEY="$RSA_KEY" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" bash << 'EOF'
             set -euo pipefail
             export GIT_DISCOVERY_ACROSS_FILESYSTEM=1
-            SITE_DIR="$GITHUB_WORKSPACE/cgo-void-repo/site"
             DIST_DIR="$GITHUB_WORKSPACE/cgo-void-repo/dist/x86_64"
             DIST_V3_DIR="$GITHUB_WORKSPACE/cgo-void-repo/dist/x86_64-v3"
-            mkdir -p "$SITE_DIR" "$DIST_DIR" "$DIST_V3_DIR"
+            mkdir -p "$DIST_DIR" "$DIST_V3_DIR"
 
             # 1. Distribute downloaded artifacts into dist/
             if [ -d "$GITHUB_WORKSPACE/downloaded-binpkgs" ]; then
@@ -250,13 +250,7 @@ jobs:
             # Clean any dangling dbg files
             rm -f "$DIST_DIR"/*-dbg* "$DIST_V3_DIR"/*-dbg*
 
-            # 2. Run website generator
-            python3 "$GITHUB_WORKSPACE/cgo-void-repo/scripts/generate-web.py" "$SITE_DIR"
-            cp -a "$GITHUB_WORKSPACE/cgo-void-repo/docs/style.css" "$GITHUB_WORKSPACE/cgo-void-repo/docs/app.js" "$SITE_DIR/" 2>/dev/null || true
-            cp -a "$GITHUB_WORKSPACE/cgo-void-repo/docs/assets" "$SITE_DIR/" 2>/dev/null || true
-            touch "$SITE_DIR/.nojekyll"
-
-            # 3. Index and sign both distribution directories
+            # 2. Index and sign both distribution directories
             for dir in "$DIST_DIR" "$DIST_V3_DIR"; do
               if [ -d "$dir" ] && ls "$dir"/*.xbps >/dev/null 2>&1; then
                 cd "$dir"
@@ -279,13 +273,7 @@ jobs:
 
       - name: Fix workspace permissions for artifact upload
         run: |
-          chmod -R 777 "$GITHUB_WORKSPACE/cgo-void-repo/site"
           chmod -R 777 "$GITHUB_WORKSPACE/cgo-void-repo/dist"
-
-      - name: Upload Pages Artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: cgo-void-repo/site
 
       - name: Upload Consolidated Generic Packages Artifact
         uses: actions/upload-artifact@v4
@@ -298,19 +286,6 @@ jobs:
         with:
           name: xbps-packages-v3
           path: cgo-void-repo/dist/x86_64-v3/*
-
-  deploy-pages:
-    name: Deploy Website to GitHub Pages
-    needs: [assemble-and-publish]
-    if: always() && needs.assemble-and-publish.result == 'success'
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
 
   release-generic:
     name: Publish Generic Packages to rolling
@@ -380,9 +355,39 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  deploy-website:
+    name: Build & Deploy Website to GitHub Pages
+    needs: [plan-builds, assemble-and-publish]
+    if: always() && !cancelled() && (needs.assemble-and-publish.result == 'success' || needs.assemble-and-publish.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate static website
+        run: |
+          mkdir -p site
+          python3 scripts/generate-web.py site
+          cp -a docs/style.css docs/app.js site/ 2>/dev/null || true
+          cp -a docs/assets site/ 2>/dev/null || true
+          cp -a repo-keys/cgo-void-repo.pem site/ 2>/dev/null || true
+          touch site/.nojekyll
+
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
   notify-finish:
     name: Notify Discord on CI Result
-    needs: [plan-builds, build-package, assemble-and-publish, deploy-pages, release-generic, release-v3]
+    needs: [plan-builds, build-package, assemble-and-publish, deploy-website]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -393,8 +398,8 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
           DISCORD_CI_WEBHOOK: ${{ secrets.DISCORD_CI_WEBHOOK }}
           BUILD_RESULT: ${{ needs.build-package.result }}
-          PAGES_RESULT: ${{ needs.deploy-pages.result }}
-          GENERIC_RESULT: ${{ needs.release-generic.result }}
-          V3_RESULT: ${{ needs.release-v3.result }}
+          PAGES_RESULT: ${{ needs.deploy-website.result }}
+          GENERIC_RESULT: ${{ needs.assemble-and-publish.result }}
+          V3_RESULT: ${{ needs.assemble-and-publish.result }}
         run: |
           python3 scripts/notify-ci.py finish
