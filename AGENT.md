@@ -272,6 +272,15 @@ These hard-won lessons prevent errors that break builds and CI workflows:
      - `xbps-src` recognizes this symlink as a subpackage definition, routing build execution to `<pkg>-dkms_package()`.
      - Local builders (`scripts/build-pkg.sh`) and CI workflows must synchronize these symlinks into `void-packages/srcpkgs/`.
 
+### Rule 19: Automatic Chaining of Upstream Updates & Matrix Builds
+- **Context**: When `.github/workflows/check-upstream-updates.yml` discovers new releases, updates templates, and pushes commits to `main` using `GITHUB_TOKEN`, GitHub's built-in anti-recursion security prevents standard `push` events from triggering `.github/workflows/build-and-release.yml`.
+- **Architectural Policy**: Upstream package updates must immediately trigger compilation so newly updated software is built, signed, and released as quickly as possible.
+- **Packaging & CI Implementation**:
+  1. Grant `actions: write` and `contents: write` permissions to `check-upstream-updates.yml`.
+  2. Track committed updates in a counter (`UPDATES_COMMITTED`).
+  3. When `UPDATES_COMMITTED > 0`, explicitly dispatch the build pipeline via `gh workflow run build-and-release.yml --ref main` with `GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}`.
+  4. The dynamic matrix planner in `build-and-release.yml` automatically detects the unbuilt versions against GitHub Releases and kicks off parallel compilation runners.
+
 ---
 
 ## 10. System Ecosystem: XLibre Integration
@@ -345,3 +354,4 @@ git push origin main
 | `failed to download signature: Not Found` | Companion `.sig2` signature files missing from release | Run `xbps-rindex --sign-pkg` on all `.xbps` packages before pushing releases. |
 | `Signing key not found` locally | Key generator script not yet executed | Run `./scripts/gen-keys.sh` to initialize `~/.local/share/cgo-void-repo/`. |
 | `fatal error: driver-config.h: No such file or directory` in VMware DKMS | `EXTRA_CFLAGS` in `dkms.conf` overrides internal module include flags in `Makefile.kernel` | Add `override EXTRA_CFLAGS := $(CC_OPTS) $(INCLUDE) $(VMW_CFLAGS) $(EXTRA_CFLAGS)` in `vmmon` & `vmnet` patches. |
+| Upstream update pushed to main but build workflow never starts | Pushes from `GITHUB_TOKEN` suppress `push` events to prevent recursion | Grant `actions: write` and dispatch via `gh workflow run build-and-release.yml --ref main`. |

@@ -2,8 +2,8 @@ name: Check Upstream Updates
 
 on:
   schedule:
-    # Run daily at 04:00 UTC
-    - cron: '0 4 * * *'
+    # Run every 4 hours to ensure updates are captured swiftly
+    - cron: '0 */4 * * *'
   workflow_dispatch:
     inputs:
       target_pkg:
@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   check-and-update:
@@ -37,15 +38,19 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Check and Update Packages
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
 
           TARGET="${{ github.event.inputs.target_pkg || 'all' }}"
           if [ "$TARGET" = "all" ] || [ -z "$TARGET" ]; then
-            PACKAGES=("antigravity" "antigravity-ide")
+            PACKAGES=("antigravity" "antigravity-ide" "artcraft-launcher" "megasync" "noctalia" "noctalia-greeter")
           else
             PACKAGES=("$TARGET")
           fi
+
+          UPDATES_COMMITTED=0
 
           for pkg in "${PACKAGES[@]}"; do
             echo "=============================================="
@@ -69,6 +74,7 @@ jobs:
               
               echo "==> Pushing isolated update for $pkg to main..."
               git push origin main
+              UPDATES_COMMITTED=$((UPDATES_COMMITTED + 1))
               
               # Small delay to ensure separate commit events
               sleep 5
@@ -76,3 +82,15 @@ jobs:
               echo "==> No changes for $pkg."
             fi
           done
+
+          if [ "$UPDATES_COMMITTED" -gt 0 ]; then
+            echo "=============================================="
+            echo "==> $UPDATES_COMMITTED package(s) updated and pushed to main."
+            echo "==> Triggering Build, Sign and Deploy pipeline immediately..."
+            echo "=============================================="
+            gh workflow run build-and-release.yml --ref main
+          else
+            echo "=============================================="
+            echo "==> All checked packages are up to date. No build needed."
+            echo "=============================================="
+          fi
