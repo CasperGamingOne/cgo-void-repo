@@ -51,7 +51,7 @@
     {
       "pkgname": "artcraft-launcher",
       "version": "0.14.0",
-      "revision": "1",
+      "revision": "2",
       "short_desc": "Craft App Suite installer, updater, and manager",
       "homepage": "https://github.com/storytold/craft-launcher",
       "license": "Apache-2.0, MIT",
