@@ -1,8 +1,8 @@
 # Template file for 'linux-cachyos-lts'
 pkgname=linux-cachyos-lts
 version=6.18.60
-revision=1
-short_desc="Linux LTS kernel with CachyOS BORE scheduler (6.18 series)"
+revision=2
+short_desc="Linux LTS kernel with CachyOS BORE and ADIOS schedulers (6.18 series)"
 maintainer="CasperGamingOne <caspergamingone@proton.me>"
 license="GPL-2.0-only"
 homepage="https://github.com/CachyOS/linux-cachyos"
@@ -184,6 +184,10 @@ do_install() {
 	depmod -b ${DESTDIR}/usr -F System.map ${_kernver}
 	rm -rf ${DESTDIR}/usr/lib/debug
 	rm -f ${DESTDIR}/lib
+
+	# Install CachyOS sysctl and udev hardware optimization profiles
+	vinstall ${FILESDIR}/70-cachyos-settings.conf 644 usr/lib/sysctl.d
+	vinstall ${FILESDIR}/60-ioschedulers.rules 644 usr/lib/udev/rules.d
 }
 
 linux-cachyos-lts-headers_package() {

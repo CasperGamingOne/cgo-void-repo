@@ -61,8 +61,8 @@
     {
       "pkgname": "linux-cachyos-lts",
       "version": "6.18.60",
-      "revision": "1",
-      "short_desc": "Linux LTS kernel with CachyOS BORE scheduler (6.18 series)",
+      "revision": "2",
+      "short_desc": "Linux LTS kernel with CachyOS BORE and ADIOS schedulers (6.18 series)",
       "homepage": "https://github.com/CachyOS/linux-cachyos",
       "license": "GPL-2.0-only",
       "maintainer": "CasperGamingOne <caspergamingone@proton.me>",
@@ -71,7 +71,7 @@
     {
       "pkgname": "linux-cachyos-lts-headers",
       "version": "6.18.60",
-      "revision": "1",
+      "revision": "2",
       "short_desc": "Linux LTS kernel headers for 3rd-party DKMS modules (6.18 series)",
       "homepage": "https://github.com/CachyOS/linux-cachyos",
       "license": "GPL-2.0-only",

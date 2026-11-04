@@ -1,0 +1,11 @@
+# CachyOS Storage I/O Scheduler Rules
+# Allocates optimal block-layer schedulers per device type
+
+# Rotational Disks (HDD) -> BFQ
+ACTION=="add|change", KERNEL=="sd[a-z]*", ATTR{queue/rotational}=="1", ATTR{queue/scheduler}="bfq"
+
+# SATA SSDs & eMMC -> mq-deadline
+ACTION=="add|change", KERNEL=="sd[a-z]*|mmcblk[0-9]*", ATTR{queue/rotational}=="0", ATTR{queue/scheduler}="mq-deadline"
+
+# NVMe Solid State Drives -> ADIOS (Adaptive Deadline I/O Scheduler)
+ACTION=="add|change", KERNEL=="nvme[0-9]*", ATTR{queue/rotational}=="0", ATTR{queue/scheduler}="adios"
