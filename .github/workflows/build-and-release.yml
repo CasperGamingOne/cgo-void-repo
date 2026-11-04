@@ -303,7 +303,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload rolling dist/x86_64/* --clobber
+          gh release upload rolling dist/x86_64/* --clobber --repo ${{ github.repository }}
 
   release-v3:
     name: Publish Optimized Packages to rolling-v3
@@ -321,7 +321,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload rolling-v3 dist/x86_64-v3/* --clobber
+          gh release upload rolling-v3 dist/x86_64-v3/* --clobber --repo ${{ github.repository }}
 
   deploy-website:
     name: Build & Deploy Website to GitHub Pages
