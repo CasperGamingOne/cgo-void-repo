@@ -191,7 +191,7 @@
     {
       "pkgname": "winpodx",
       "version": "0.12.1",
-      "revision": "1",
+      "revision": "2",
       "short_desc": "Windows app integration for Linux desktop",
       "homepage": "https://github.com/kernalix7/winpodx",
       "license": "MIT",

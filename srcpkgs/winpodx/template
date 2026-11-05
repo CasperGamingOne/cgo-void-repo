@@ -1,10 +1,10 @@
 # Template file for 'winpodx'
 pkgname=winpodx
 version=0.12.1
-revision=1
+revision=2
 build_style=python3-pep517
 hostmakedepends="hatchling"
-depends="python3 podman podman-compose freerdp python3-pyside6 python3-Pillow python3-xdg"
+depends="python3 podman podman-compose freerdp python3-pyside6 python3-pyside6-gui python3-pyside6-widgets python3-pyside6-svg python3-pyside6-dbus python3-Pillow python3-xdg python3-cairosvg"
 short_desc="Windows app integration for Linux desktop"
 maintainer="CasperGamingOne <caspergamingone@proton.me>"
 license="MIT"
