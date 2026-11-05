@@ -47,6 +47,7 @@ BINARY_ONLY_PACKAGES=(
     "linux-cachyos-lts-meta"
     "megasync"
     "noctalia-meta"
+    "winpodx"
 )
 
 is_binary_only() {

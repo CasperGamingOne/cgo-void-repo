@@ -1,0 +1,19 @@
+# Template file for 'winpodx'
+pkgname=winpodx
+version=0.12.1
+revision=1
+build_style=python3-pep517
+hostmakedepends="hatchling"
+depends="python3 podman podman-compose freerdp python3-pyside6 python3-Pillow python3-xdg"
+short_desc="Windows app integration for Linux desktop"
+maintainer="CasperGamingOne <caspergamingone@proton.me>"
+license="MIT"
+homepage="https://github.com/kernalix7/winpodx"
+distfiles="https://github.com/kernalix7/winpodx/releases/download/v${version}/winpodx-${version}.tar.gz"
+checksum=82c8a47a8fab00f18632f090f6b2a414a8af9a5bb8024262b16b7ba30d3caccd
+
+post_install() {
+	vinstall data/winpodx.desktop 644 usr/share/applications
+	vinstall data/winpodx-icon.svg 644 usr/share/icons/hicolor/scalable/apps winpodx.svg
+	vlicense LICENSE
+}

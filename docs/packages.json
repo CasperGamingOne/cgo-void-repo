@@ -189,6 +189,16 @@
       "restricted": "yes"
     },
     {
+      "pkgname": "winpodx",
+      "version": "0.12.1",
+      "revision": "1",
+      "short_desc": "Windows app integration for Linux desktop",
+      "homepage": "https://github.com/kernalix7/winpodx",
+      "license": "MIT",
+      "maintainer": "CasperGamingOne <caspergamingone@proton.me>",
+      "restricted": "no"
+    },
+    {
       "pkgname": "xdg-desktop-portal-umbriel",
       "version": "0.1.0",
       "revision": "1",
