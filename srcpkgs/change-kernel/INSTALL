@@ -1,0 +1,21 @@
+case "$ACTION" in
+post)
+	if [ -f etc/default/change-kernel ]; then
+		. etc/default/change-kernel
+	else
+		PREFER_KERNEL="cachyos"
+	fi
+
+	if [ "$PREFER_KERNEL" = "cachyos" ] && [ -f etc/default/grub ]; then
+		if ls boot/vmlinuz-*-cachyos* >/dev/null 2>&1; then
+			if ! grep -q 'GRUB_TOP_LEVEL=.*cachyos' etc/default/grub 2>/dev/null; then
+				echo 'GRUB_TOP_LEVEL="$(ls -v /boot/vmlinuz-*-cachyos* 2>/dev/null | tail -n 1)"' >> etc/default/grub
+			fi
+		fi
+	fi
+
+	if [ -x usr/bin/update-grub ]; then
+		usr/bin/update-grub || :
+	fi
+	;;
+esac

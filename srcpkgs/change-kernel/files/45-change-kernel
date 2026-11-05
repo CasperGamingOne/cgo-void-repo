@@ -1,0 +1,34 @@
+#!/bin/sh
+# /etc/kernel.d/post-install/45-change-kernel
+# Preserves preferred default boot kernel in GRUB during kernel updates
+
+GRUB_CONF="/etc/default/grub"
+CONF_FILE="/etc/default/change-kernel"
+PREFER_KERNEL="cachyos"
+
+if [ -f "$CONF_FILE" ]; then
+    . "$CONF_FILE"
+fi
+
+if [ ! -f "$GRUB_CONF" ]; then
+    exit 0
+fi
+
+case "$PREFER_KERNEL" in
+    cachyos|linux-cachyos-lts)
+        latest_cachyos="$(ls -v /boot/vmlinuz-*-cachyos* 2>/dev/null | tail -n 1 || true)"
+        if [ -n "$latest_cachyos" ]; then
+            sed -i '/^GRUB_TOP_LEVEL=/d' "$GRUB_CONF"
+            echo 'GRUB_TOP_LEVEL="$(ls -v /boot/vmlinuz-*-cachyos* 2>/dev/null | tail -n 1)"' >> "$GRUB_CONF"
+        fi
+        ;;
+    default|stock|void)
+        sed -i '/^GRUB_TOP_LEVEL=/d' "$GRUB_CONF"
+        ;;
+    *)
+        if [ -f "$PREFER_KERNEL" ]; then
+            sed -i '/^GRUB_TOP_LEVEL=/d' "$GRUB_CONF"
+            echo "GRUB_TOP_LEVEL=\"$PREFER_KERNEL\"" >> "$GRUB_CONF"
+        fi
+        ;;
+esac

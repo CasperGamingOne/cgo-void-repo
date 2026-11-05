@@ -1,0 +1,17 @@
+# Template file for 'change-kernel'
+pkgname=change-kernel
+version=1.0.0
+revision=1
+depends="grub"
+conf_files="/etc/default/change-kernel"
+short_desc="Interactive and automated default boot kernel manager for GRUB"
+maintainer="CasperGamingOne <caspergamingone@proton.me>"
+license="MIT"
+homepage="https://github.com/CasperGamingOne/cgo-void-repo"
+
+do_install() {
+	vbin ${FILESDIR}/change-kernel
+	vinstall ${FILESDIR}/45-change-kernel 755 etc/kernel.d/post-install
+	vinstall ${FILESDIR}/change-kernel.conf 644 etc/default change-kernel
+	vlicense ${FILESDIR}/LICENSE
+}

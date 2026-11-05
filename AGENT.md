@@ -81,7 +81,7 @@ To maintain maximum reliability, performance, and maintainability across the rep
 ### Architecture Rules:
 1. **Identical Package Names**: Never append `-v3` to `pkgname` in templates. Package names remain strictly identical (e.g. `linux-cachyos-lts`, `noctalia`, `ananicy-cpp`). The channel endpoint chosen by the user in `/etc/xbps.d/10-cgo-void-repo.conf` determines which architecture is fetched.
 2. **Performance-Critical Software**: Compiled natively for both channels (`ananicy-cpp`, `linux-cachyos-lts`, `noctalia`, `umbriel`, `xdg-desktop-portal-umbriel`, `vmware-workstation`).
-3. **Universal Binary Mirroring**: Proprietary binaries, Electron bundles, and architecture-agnostic packages (`antigravity`, `antigravity-ide`, `artcraft-launcher`, `cgo-hello`, `dolphin-megasync`, `linux-cachyos-lts-default`, `linux-cachyos-lts-meta`, `megasync`, `noctalia-meta`) are mirrored to both channels so users on `rolling-v3` have access to the complete catalog without dual-repo setups.
+3. **Universal Binary Mirroring**: Proprietary binaries, Electron bundles, and architecture-agnostic packages (`antigravity`, `antigravity-ide`, `artcraft-launcher`, `cgo-hello`, `change-kernel`, `dolphin-megasync`, `linux-cachyos-lts-meta`, `megasync`, `noctalia-meta`) are mirrored to both channels so users on `rolling-v3` have access to the complete catalog without dual-repo setups.
 4. **CPU Detection**: Users can verify compatibility via:
    ```bash
    /lib/ld-linux-x86-64.so.2 --help | grep -A 4 "v3"

@@ -69,6 +69,16 @@
       "restricted": "no"
     },
     {
+      "pkgname": "change-kernel",
+      "version": "1.0.0",
+      "revision": "1",
+      "short_desc": "Interactive and automated default boot kernel manager for GRUB",
+      "homepage": "https://github.com/CasperGamingOne/cgo-void-repo",
+      "license": "MIT",
+      "maintainer": "CasperGamingOne <caspergamingone@proton.me>",
+      "restricted": "no"
+    },
+    {
       "pkgname": "dolphin-megasync",
       "version": "6.2.0",
       "revision": "1",
@@ -85,16 +95,6 @@
       "short_desc": "Linux LTS kernel with CachyOS BORE and ADIOS schedulers (6.18 series)",
       "homepage": "https://github.com/CachyOS/linux-cachyos",
       "license": "GPL-2.0-only",
-      "maintainer": "CasperGamingOne <caspergamingone@proton.me>",
-      "restricted": "no"
-    },
-    {
-      "pkgname": "linux-cachyos-lts-default",
-      "version": "1.0.0",
-      "revision": "1",
-      "short_desc": "Configure CachyOS LTS as primary boot kernel in GRUB",
-      "homepage": "https://github.com/CasperGamingOne/cgo-void-repo",
-      "license": "MIT",
       "maintainer": "CasperGamingOne <caspergamingone@proton.me>",
       "restricted": "no"
     },

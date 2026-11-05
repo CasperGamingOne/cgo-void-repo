@@ -1,0 +1,204 @@
+#!/bin/sh
+# change-kernel - Interactive and automated GRUB boot kernel manager for Void Linux
+set -eu
+
+GRUB_CONF="/etc/default/grub"
+CONF_FILE="/etc/default/change-kernel"
+PREFER_KERNEL="cachyos"
+
+if [ -f "$CONF_FILE" ]; then
+    . "$CONF_FILE"
+fi
+
+get_kernels() {
+    ls -v /boot/vmlinuz-* 2>/dev/null || true
+}
+
+get_current_top_level() {
+    if [ -f "$GRUB_CONF" ]; then
+        sed -n 's/^GRUB_TOP_LEVEL=//p' "$GRUB_CONF" | tr -d '"' | tr -d "'"
+    fi
+}
+
+show_status() {
+    echo "======================================================"
+    echo "            Void Linux Kernel Boot Manager            "
+    echo "======================================================"
+    echo "Currently Running: $(uname -r)"
+    echo ""
+    top_level="$(get_current_top_level)"
+    if [ -n "$top_level" ]; then
+        echo "GRUB Default Kernel: Pinned to '$top_level'"
+    else
+        echo "GRUB Default Kernel: Standard Void Linux (highest version order)"
+    fi
+    echo ""
+    echo "Installed Kernels in /boot:"
+    for k in $(get_kernels); do
+        kname=$(basename "$k" | sed 's/^vmlinuz-//')
+        if [ "$k" = "$top_level" ] || [ "$kname" = "$top_level" ]; then
+            echo "  * $kname [DEFAULT BOOT]"
+        elif [ "$kname" = "$(uname -r)" ]; then
+            echo "  > $kname [CURRENTLY RUNNING]"
+        else
+            echo "    $kname"
+        fi
+    done
+    echo "======================================================"
+}
+
+list_kernels() {
+    for k in $(get_kernels); do
+        basename "$k" | sed 's/^vmlinuz-//'
+    done
+}
+
+set_kernel() {
+    local target="$1"
+    if [ "$(id -u)" -ne 0 ]; then
+        echo "Error: Must be run as root (or with sudo) to change boot kernel." >&2
+        exit 1
+    fi
+    if [ ! -f "$GRUB_CONF" ]; then
+        echo "Error: $GRUB_CONF not found." >&2
+        exit 1
+    fi
+
+    case "$target" in
+        cachyos|linux-cachyos-lts)
+            echo "==> Configuring CachyOS LTS as default boot kernel..."
+            sed -i '/^GRUB_TOP_LEVEL=/d' "$GRUB_CONF"
+            echo 'GRUB_TOP_LEVEL="$(ls -v /boot/vmlinuz-*-cachyos* 2>/dev/null | tail -n 1)"' >> "$GRUB_CONF"
+            mkdir -p "$(dirname "$CONF_FILE")"
+            echo 'PREFER_KERNEL="cachyos"' > "$CONF_FILE"
+            ;;
+        default|stock|void)
+            echo "==> Restoring Void Linux standard kernel boot order..."
+            sed -i '/^GRUB_TOP_LEVEL=/d' "$GRUB_CONF"
+            mkdir -p "$(dirname "$CONF_FILE")"
+            echo 'PREFER_KERNEL="default"' > "$CONF_FILE"
+            ;;
+        *)
+            local chosen=""
+            if [ -f "$target" ]; then
+                chosen="$target"
+            elif [ -f "/boot/vmlinuz-$target" ]; then
+                chosen="/boot/vmlinuz-$target"
+            else
+                for k in $(get_kernels); do
+                    if echo "$k" | grep -q "$target"; then
+                        chosen="$k"
+                        break
+                    fi
+                done
+            fi
+
+            if [ -z "$chosen" ] || [ ! -f "$chosen" ]; then
+                echo "Error: Kernel '$target' not found in /boot." >&2
+                exit 1
+            fi
+
+            echo "==> Setting default boot kernel to: $(basename "$chosen")"
+            sed -i '/^GRUB_TOP_LEVEL=/d' "$GRUB_CONF"
+            echo "GRUB_TOP_LEVEL=\"$chosen\"" >> "$GRUB_CONF"
+            mkdir -p "$(dirname "$CONF_FILE")"
+            echo "PREFER_KERNEL=\"$chosen\"" > "$CONF_FILE"
+            ;;
+    esac
+
+    if command -v update-grub >/dev/null 2>&1; then
+        echo "==> Updating GRUB configuration..."
+        update-grub
+    elif command -v grub-mkconfig >/dev/null 2>&1; then
+        echo "==> Updating GRUB configuration..."
+        grub-mkconfig -o /boot/grub/grub.cfg
+    fi
+    echo "==> Done! Boot default updated successfully."
+}
+
+interactive_menu() {
+    echo "======================================================"
+    echo "         Select Default Boot Kernel for GRUB          "
+    echo "======================================================"
+    top_level="$(get_current_top_level)"
+    kernels=$(get_kernels)
+    if [ -z "$kernels" ]; then
+        echo "No kernels found in /boot!" >&2
+        exit 1
+    fi
+
+    i=1
+    for k in $kernels; do
+        kname=$(basename "$k" | sed 's/^vmlinuz-//')
+        extra=""
+        if [ "$k" = "$top_level" ] || [ "$kname" = "$top_level" ]; then
+            extra=" [CURRENT DEFAULT]"
+        fi
+        if [ "$kname" = "$(uname -r)" ]; then
+            extra="$extra (Running)"
+        fi
+        echo "  $i) $kname$extra"
+        i=$((i + 1))
+    done
+    echo "  s) Void Default (Stock automatic ordering)"
+    echo "  q) Quit without changing"
+    echo ""
+    printf "Enter choice [1-%d/s/q]: " "$((i - 1))"
+    read -r choice
+
+    case "$choice" in
+        q|Q|"")
+            echo "Cancelled."
+            exit 0
+            ;;
+        s|S)
+            set_kernel default
+            ;;
+        *)
+            if [ "$choice" -ge 1 ] 2>/dev/null && [ "$choice" -lt "$i" ] 2>/dev/null; then
+                selected=$(echo "$kernels" | sed -n "${choice}p")
+                set_kernel "$selected"
+            else
+                echo "Invalid selection."
+                exit 1
+            fi
+            ;;
+    esac
+}
+
+case "${1:-}" in
+    status)
+        show_status
+        ;;
+    list)
+        list_kernels
+        ;;
+    set)
+        if [ -z "${2:-}" ]; then
+            echo "Usage: change-kernel set <cachyos|default|<kernel-version>>" >&2
+            exit 1
+        fi
+        set_kernel "$2"
+        ;;
+    -h|--help|help)
+        echo "Usage: change-kernel [COMMAND] [ARGS]"
+        echo ""
+        echo "Commands:"
+        echo "  (no args)             Launch interactive kernel selection menu"
+        echo "  status                Show current boot kernel status"
+        echo "  list                  List available installed kernels"
+        echo "  set cachyos           Set CachyOS LTS as default boot kernel"
+        echo "  set default           Restore Void Linux standard kernel boot order"
+        echo "  set <version>         Set a specific kernel version as default"
+        ;;
+    "")
+        if [ -t 0 ]; then
+            interactive_menu
+        else
+            show_status
+        fi
+        ;;
+    *)
+        set_kernel "$1"
+        ;;
+esac
