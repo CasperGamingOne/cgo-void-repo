@@ -1,9 +1,10 @@
 # Template file for 'noctalia-meta'
 pkgname=noctalia-meta
 version=5.4.1
-revision=1
+revision=2
 metapackage=yes
-depends="noctalia>=5.4.1 noctalia-greeter>=1.7.0 umbriel>=0.1.0 xdg-desktop-portal-umbriel>=0.1.0"
+depends="noctalia>=5.4.1 noctalia-greeter>=1.7.0 umbriel>=0.1.0 xdg-desktop-portal-umbriel>=0.1.0
+ pipewire wireplumber"
 short_desc="Noctalia Wayland desktop environment meta-package"
 maintainer="CasperGamingOne <caspergamingone@proton.me>"
 license="Public Domain"

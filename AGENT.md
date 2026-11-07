@@ -281,6 +281,11 @@ These hard-won lessons prevent errors that break builds and CI workflows:
   3. When `UPDATES_COMMITTED > 0`, explicitly dispatch the build pipeline via `gh workflow run build-and-release.yml --ref main` with `GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}`.
   4. The dynamic matrix planner in `build-and-release.yml` automatically detects the unbuilt versions against GitHub Releases and kicks off parallel compilation runners.
 
+### Rule 20: VirtualBox / KVM Hardware Virtualization Conflict on Kernel 6.12+
+- **Context**: Starting with Linux kernel 6.12, the KVM module enables hardware virtualization (VT-x / AMD-V) upon module load by default (`enable_virt_at_load=1` / `Y`).
+- **Symptom**: When KVM is loaded, other hypervisors such as VirtualBox are locked out of CPU hardware virtualization and fail to boot VMs (e.g. `VERR_VMX_IN_VMX_ROOT_MODE`).
+- **Agent Rule & Solution**: When VirtualBox fails to boot VMs on kernel 6.12+, configure modprobe with `options kvm enable_virt_at_load=0` in `/etc/modprobe.d/kvm.conf` (or `/etc/modprobe.d/virtualbox.conf`). This defers KVM hardware virtualization initialization until a KVM guest is actively launched, allowing VirtualBox to initialize virtualization without conflicts.
+
 ---
 
 ## 10. System Ecosystem: XLibre Integration
@@ -355,3 +360,4 @@ git push origin main
 | `Signing key not found` locally | Key generator script not yet executed | Run `./scripts/gen-keys.sh` to initialize `~/.local/share/cgo-void-repo/`. |
 | `fatal error: driver-config.h: No such file or directory` in VMware DKMS | `EXTRA_CFLAGS` in `dkms.conf` overrides internal module include flags in `Makefile.kernel` | Add `override EXTRA_CFLAGS := $(CC_OPTS) $(INCLUDE) $(VMW_CFLAGS) $(EXTRA_CFLAGS)` in `vmmon` & `vmnet` patches. |
 | Upstream update pushed to main but build workflow never starts | Pushes from `GITHUB_TOKEN` suppress `push` events to prevent recursion | Grant `actions: write` and dispatch via `gh workflow run build-and-release.yml --ref main`. |
+| `VirtualBox fails to boot VMs on kernel 6.12+ (VERR_VMX_IN_VMX_ROOT_MODE)` | KVM locks VT-x/AMD-V at module load time (`enable_virt_at_load=1`) | Add `options kvm enable_virt_at_load=0` in `/etc/modprobe.d/kvm.conf` and reload `kvm`. |

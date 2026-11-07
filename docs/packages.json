@@ -50,8 +50,8 @@
     },
     {
       "pkgname": "artcraft-launcher",
-      "version": "0.14.0",
-      "revision": "2",
+      "version": "0.16.0",
+      "revision": "1",
       "short_desc": "Craft App Suite installer, updater, and manager",
       "homepage": "https://github.com/storytold/craft-launcher",
       "license": "Apache-2.0, MIT",
@@ -141,7 +141,7 @@
     {
       "pkgname": "noctalia-greeter",
       "version": "1.7.0",
-      "revision": "1",
+      "revision": "2",
       "short_desc": "Greeter for greetd based on Noctalia desktop shell",
       "homepage": "https://github.com/noctalia-dev/noctalia-greeter",
       "license": "MIT",
@@ -151,7 +151,7 @@
     {
       "pkgname": "noctalia-meta",
       "version": "5.4.1",
-      "revision": "1",
+      "revision": "2",
       "short_desc": "Noctalia Wayland desktop environment meta-package",
       "homepage": "https://github.com/noctalia-dev/noctalia",
       "license": "Public Domain",
