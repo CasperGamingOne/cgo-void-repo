@@ -1,6 +1,6 @@
 # Template file for 'artcraft-launcher'
 pkgname=artcraft-launcher
-version=0.17.0
+version=0.18.0
 revision=1
 archs="x86_64"
 short_desc="Craft App Suite installer, updater, and manager"
@@ -8,7 +8,7 @@ maintainer="CasperGamingOne <caspergamingone@proton.me>"
 license="Apache-2.0, MIT"
 homepage="https://github.com/storytold/craft-launcher"
 distfiles="https://github.com/storytold/craft-launcher/releases/download/v${version}/artcraft-launcher-${version}-linux-x86_64.tar.gz"
-checksum=bbf2b1b84f52bbae81f8723034cce2d5862f28664adb28787fb11e1d4b93b98a
+checksum=62e1395aa874e3cc4fc760482af7554d8408735fe6d2ffc2d6f6d4c070ebc31d
 
 depends="dbus-libs"
 nostrip=yes
