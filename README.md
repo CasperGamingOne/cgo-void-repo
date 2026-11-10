@@ -10,10 +10,16 @@
 
 # cgo-void-repo 🐧
 
+> [!IMPORTANT]
+> I am no longer on Void Linux, but as my love for it is still there, i will keep maintaining this repo for as long as i can, plus the automated actions i put in place will help me do just that 🫀
+
 Personal XBPS binary package repository for **Void Linux**, maintained by **CasperGamingOne** under the **Games4Everyone** project. Features continuous rolling releases with dual-channel architecture: standard baseline and native **x86_64-v3 microarchitecture performance optimizations**.
 
 🌐 **Website & Portal:** [https://caspergamingone.github.io/cgo-void-repo](https://caspergamingone.github.io/cgo-void-repo)  
 📥 **Package Request Form:** [Submit a Request](https://caspergamingone.github.io/cgo-void-repo#request)
+
+> [!NOTE]
+> For Discord notifications on your package request, you will have to join this server => [DJSnowDogs's pups](https://dcserver.link/djsnowdogs). I am sorry, it's Discord limitations, not mine. 💬
 
 ---
 
