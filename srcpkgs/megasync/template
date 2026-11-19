@@ -1,6 +1,6 @@
 # Template file for 'megasync'
 pkgname=megasync
-version=6.7.0
+version=6.7.1
 revision=1
 _debrev=1.1
 archs="x86_64"
@@ -11,7 +11,7 @@ maintainer="CasperGamingOne <caspergamingone@proton.me>"
 license="custom:MEGA LIMITED CODE LICENCE"
 homepage="https://mega.io/desktop"
 distfiles="https://mega.nz/linux/repo/Debian_12/amd64/megasync_${version}-${_debrev}_amd64.deb"
-checksum=4062c18a0166405ad2d74162cb596652347398dca93301536d90ef33df075b98
+checksum=39e08b9be76650769eb86a2ec6e61009335874944a9c94179ef88eec199a2546
 restricted=yes
 nostrip=yes
 noshlibprovides=yes
