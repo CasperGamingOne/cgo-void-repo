@@ -1,8 +1,8 @@
 # Template file for 'antigravity'
 pkgname=antigravity
-version=2.35.0
+version=2.35.1
 revision=1
-_buildver=6394266482769920
+_buildver=4615540875067392
 archs="x86_64"
 create_wrksrc=yes
 depends="gtk+3 nss alsa-lib dbus glib libX11 libXcomposite libXdamage libXext libXfixes libXrandr libxkbcommon mesa xdg-utils"
@@ -11,7 +11,7 @@ maintainer="CasperGamingOne <caspergamingone@proton.me>"
 license="custom:Google-Antigravity"
 homepage="https://antigravity.google"
 distfiles="https://storage.googleapis.com/antigravity-public/antigravity-hub/${version}-${_buildver}/linux-x64/Antigravity.tar.gz"
-checksum=b88719cbd5f408c0121ee77d2974011a2748306b2591d346eb488a20bc51ec29
+checksum=d921039a86fbfa0d06968c973eadffa83572b434a351a771b8ad9f241a493d7e
 restricted=yes
 nostrip=yes
 
